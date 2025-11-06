@@ -5,7 +5,7 @@ from rich.status import Status
 from typing import Any, Generator
 
 
-from srt.utils.logger import logger_setup
+from relx.utils.logger import logger_setup
 
 
 log = logger_setup(__name__)

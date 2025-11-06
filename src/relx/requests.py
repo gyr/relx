@@ -1,8 +1,8 @@
 import argparse
 import datetime
 
-from srt.utils.logger import logger_setup
-from srt.utils.tools import (
+from relx.utils.logger import logger_setup
+from relx.utils.tools import (
     count_days,
     run_command_and_stream_output,
     running_spinner_decorator,

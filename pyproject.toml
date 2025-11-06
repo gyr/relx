@@ -3,12 +3,12 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "srt"
+name = "relx"
 dynamic = ["version"]
 authors = [
   { name="Gustavo Yokoyama Ribeiro", email="gyr@keemail.me" },
 ]
-description = "A release management tool for SUSE."
+description = "Python Release-Management eXtension Suite"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.8"
@@ -30,12 +30,12 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/gyr/srt-release-tools"
-Documentation = "https://srt-release-tools.readthedocs.io/"
-"Bug Tracker" = "https://github.com/gyr/srt-release-tools/issues"
+Homepage = "https://github.com/gyr/relx"
+Documentation = "https://relx.readthedocs.io/"
+"Bug Tracker" = "https://github.com/gyr/relx/issues"
 
 [project.scripts]
-srt = "srt.cli:main"
+relx = "relx.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"] # Tell setuptools to look for packages in the src directory
@@ -45,4 +45,4 @@ where = ["src"] # Tell setuptools to look for packages in the src directory
 package-dir = {"" = "src"}
 
 [tool.setuptools.dynamic]
-version = {attr = "srt.__version__"}
+version = {attr = "relx.__version__"}

@@ -5,8 +5,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
 
-from srt.utils.logger import logger_setup
-from srt.utils.tools import (
+from relx.utils.logger import logger_setup
+from relx.utils.tools import (
     pager_command,
     run_command,
     running_spinner_decorator,
@@ -33,7 +33,7 @@ def valid_staging(staging: str) -> str:
         raise argparse.ArgumentTypeError(msg) from exc
 
 
-def print_panel(lines: list[str], title: str="") -> None:
+def print_panel(lines: list[str], title: str = "") -> None:
     console = Console()
     panel_content = "\n".join(lines)
     panel = Panel(panel_content, title=title)
@@ -114,7 +114,6 @@ def approve_request(api_url: str, request: str, is_bugowner: bool) -> list[str]:
 
 
 def show_request_list(requests: list[tuple[str, str]]) -> list[str]:
-    title = "Request Reviews"
     lines = []
     if len(requests) == 0:
         lines.append("No pending reviews.")
@@ -192,7 +191,9 @@ def main(args, config) -> None:
                 default="y",
             )
             if request_approval == "y":
-                print_panel(approve_request(args.osc_instance, request[0], args.bugowner))
+                print_panel(
+                    approve_request(args.osc_instance, request[0], args.bugowner)
+                )
         elif review_request == "a":
             sys.exit(0)
 

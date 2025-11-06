@@ -9,8 +9,8 @@ except ImportError:
     LuaTable = Any  # Fallback if LuaTable cannot be imported
 
 
-from srt.utils.logger import logger_setup
-from srt.utils.tools import (
+from relx.utils.logger import logger_setup
+from relx.utils.tools import (
     run_command,
     run_command_and_stream_output,
     running_spinner_decorator,

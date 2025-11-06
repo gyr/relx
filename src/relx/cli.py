@@ -9,14 +9,14 @@ import argcomplete
 from dotenv import load_dotenv
 from lupa import LuaRuntime  # type: ignore
 
-from srt import __version__
-from srt.utils.logger import logger_setup, global_logger_config
+from relx import __version__
+from relx.utils.logger import logger_setup, global_logger_config
 
 # Get the directory of config.lua
 load_dotenv()
 config_dir = os.environ.get("CONFIG_DIR")
 if config_dir is None:
-    config_dir = os.path.expanduser("~/.config/srt")
+    config_dir = os.path.expanduser("~/.config/relx")
 
 # Load the Lua runtime and modify the package path
 # lua = lupa.LuaRuntime()
@@ -62,9 +62,9 @@ def import_sle_module(name: str) -> None:
     """
     Imports a module
 
-    :param name: Module in the srt package.
+    :param name: Module in the relx package.
     """
-    module = importlib.import_module(f".{name}", package="srt")
+    module = importlib.import_module(f".{name}", package="relx")
     module.build_parser(SUBPARSERS, config)
 
 

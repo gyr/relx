@@ -4,9 +4,9 @@ from rich.console import Console
 from rich.table import Table
 from subprocess import CalledProcessError
 
-from srt.users import get_groups, get_users
-from srt.utils.logger import logger_setup
-from srt.utils.tools import (
+from relx.users import get_groups, get_users
+from relx.utils.logger import logger_setup
+from relx.utils.tools import (
     run_command,
     run_command_and_stream_output,
     running_spinner_decorator,
@@ -76,7 +76,9 @@ def get_bugowner(api_url: str, package: str) -> tuple[list, bool]:
     :return: source package
     """
     fixed_package = package.replace("++", "%2B%2B")
-    command = f"osc -A {api_url} api /search/owner?package={fixed_package}&filter=bugowner"
+    command = (
+        f"osc -A {api_url} api /search/owner?package={fixed_package}&filter=bugowner"
+    )
     bugowners = []
     is_group = False
     try:
