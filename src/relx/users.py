@@ -1,4 +1,4 @@
-from bs4 import BeautifulSoup
+from lxml import etree
 from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
@@ -27,23 +27,25 @@ def get_groups(api_url: str, group: str, is_fulllist: bool = False) -> dict:
     try:
         command = f"osc -A {api_url} api /group/{group}"
         output = run_command(command.split())
-        soup = BeautifulSoup(output.stdout, "lxml")
+        tree = etree.fromstring(output.stdout.encode())
         info = {}
 
-        title = soup.find("title")
-        info["Group"] = title.text if title else None
+        title = tree.find("title")
+        info["Group"] = title.text if title is not None else None
 
-        email = soup.find("email")
-        info["Email"] = email.text if email else None
+        email = tree.find("email")
+        info["Email"] = email.text if email is not None else None
 
-        maintainers = soup.find_all("maintainer")
-        info["Maintainers"] = [tag["userid"] for tag in maintainers]
+        maintainers = tree.findall("maintainer")
+        info["Maintainers"] = [tag.get("userid") for tag in maintainers]
 
         if is_fulllist:
-            people = soup.find_all("person")
-            info["Users"] = [
-                person.get("userid") for person in people if person.get("userid")
-            ]
+            people = tree.findall("person")
+            users = []
+            for person in people:
+                for user in person.findall("person"):
+                    users.append(user.get("userid"))
+            info["Users"] = users
 
         return info
     except CalledProcessError as e:
@@ -83,9 +85,9 @@ def get_users(
             raise RuntimeError("Invalid user search.")
 
         output = run_command(command.split())
-        soup = BeautifulSoup(output.stdout, "lxml")
+        tree = etree.fromstring(output.stdout.encode())
         info = {}
-        people = soup.find_all("person")
+        people = tree.findall("person")
         if not people:
             raise RuntimeError(f"{search_text} not found.")
         for person in people:

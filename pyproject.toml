@@ -25,7 +25,6 @@ dependencies = [
     "python-dotenv",
     "lupa",
     "rich",
-    "beautifulsoup4",
     "lxml",
 ]
 

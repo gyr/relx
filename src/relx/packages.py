@@ -1,5 +1,5 @@
 import re
-from bs4 import BeautifulSoup
+from lxml import etree
 from rich.console import Console
 from rich.table import Table
 from subprocess import CalledProcessError
@@ -83,13 +83,13 @@ def get_bugowner(api_url: str, package: str) -> tuple[list, bool]:
     is_group = False
     try:
         output = run_command(command.split())
-        soup = BeautifulSoup(output.stdout, "lxml")
-        people = soup.find_all("person")
+        tree = etree.fromstring(output.stdout.encode())
+        people = tree.findall("owner/person")
         if len(people) != 0:
             bugowners = [person.get("name") for person in people]
             return bugowners, is_group
 
-        groups = soup.find_all("group")
+        groups = tree.findall("owner/group")
         if len(groups) != 0:
             is_group = True
             bugowners = [group.get("name") for group in groups]

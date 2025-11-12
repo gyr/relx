@@ -1,6 +1,6 @@
 import argparse
 import sys
-from bs4 import BeautifulSoup
+from lxml import etree
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
@@ -63,18 +63,18 @@ def list_requests(
         )
     result = run_command(command)
 
-    soup = BeautifulSoup(result.stdout, "lxml")
+    tree = etree.fromstring(result.stdout.encode())
 
     requests = []
 
-    for request in soup.find_all("request"):
+    for request in tree.findall("request"):
         state_tag = request.find("state")
-        if state_tag and state_tag.get("name") == "review":
-            relmgr_review = request.find("review", {"by_group": "sle-release-managers"})
-            if relmgr_review and relmgr_review.get("state") == "new":
+        if state_tag is not None and state_tag.get("name") == "review":
+            relmgr_review = request.find("review[@by_group='sle-release-managers']")
+            if relmgr_review is not None and relmgr_review.get("state") == "new":
                 request_tuple = (
                     request.get("id"),
-                    request.action.target.get("package"),
+                    request.find("action/target").get("package"),
                 )
                 log.debug(f"{request_tuple=}")
                 requests.append(request_tuple)
