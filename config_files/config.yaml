@@ -1,0 +1,22 @@
+debug: false
+api_url: "https://api.suse.de/"
+default_project: "SUSE:SLFO:Main"
+default_product: "SUSE:SLFO:Products:SLES:16.1"
+default_productcomposer: "/000productcompose/default.productcompose"
+artifacts:
+  repo_info:
+    - name: "images"
+      pattern: "\\b(kiwi-templates-Minimal|SL-Micro)\\b"
+    - name: "product"
+      pattern: "\\b(000productcompose:)\\b"
+  invalid_extensions:
+    - ".json"
+    - ".milestone"
+    - ".packages"
+    - ".sha256"
+    - ".asc"
+    - ".report"
+    - ".rpm"
+    - ".verified"
+  invalid_start:
+    - "_"

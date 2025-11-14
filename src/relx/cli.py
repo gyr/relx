@@ -4,28 +4,54 @@ import importlib
 import os
 import sys
 import urllib.error
+import yaml
 
 import argcomplete
 from dotenv import load_dotenv
-from lupa import LuaRuntime  # type: ignore
+from typing import Dict, Any
 
 from relx import __version__
 from relx.utils.logger import logger_setup, global_logger_config
 
-# Get the directory of config.lua
-load_dotenv()
-config_dir = os.environ.get("CONFIG_DIR")
-if config_dir is None:
-    config_dir = os.path.expanduser("~/.config/relx")
+# --- Configuration ---
+# Explicitly load .env from the project root for developer convenience.
+# This is safer than a broad search and does nothing if the .env file doesn't exist.
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+dotenv_path = os.path.join(project_root, ".env")
+load_dotenv(dotenv_path=dotenv_path)
 
-# Load the Lua runtime and modify the package path
-# lua = lupa.LuaRuntime()
-lua = LuaRuntime()
-lua.execute(f'package.path = package.path .. ";{config_dir}/?.lua"')
+relx_conf_dir = os.environ.get("RELX_CONF_DIR")
 
-# Now you can require "config" (without the full path)
-# it will return a tuple: lua table and full path to config file
-config, _ = lua.require("config")
+if relx_conf_dir:
+    # Expand user (~) if present in the env var path
+    config_dir = os.path.expanduser(relx_conf_dir)
+else:
+    # Default to XDG_CONFIG_HOME/relx or ~/.config/relx
+    xdg_config_home = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+    config_dir = os.path.join(xdg_config_home, "relx")
+
+config_file_path = os.path.join(config_dir, "config.yaml")
+
+
+def load_config(config_file_path: str) -> Dict[str, Any]:
+    try:
+        with open(config_file_path, "r") as f:
+            config = yaml.safe_load(f)
+        return config
+    except FileNotFoundError:
+        print(
+            f"Error: Configuration file '{config_file_path}' not found.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    except yaml.YAMLError as e:
+        print(
+            f"Error: Invalid YAML format in '{config_file_path}': {e}", file=sys.stderr
+        )
+        sys.exit(1)
+
+
+config = load_config(config_file_path)
 
 PARSER = argparse.ArgumentParser(description="Release management tools.")
 PARSER.add_argument(
@@ -36,8 +62,8 @@ PARSER.add_argument(
 PARSER.add_argument(
     "--osc-instance",
     dest="osc_instance",
-    help="The URL of the API from the Open Buildservice instance that should be used.",
-    default=config.common.api_url,
+    help=f"The URL of the API from the Open Buildservice instance that should be used (DEFAULT = {config['api_url']}).",
+    default=config["api_url"],
 )
 PARSER.add_argument(
     "--debug",
@@ -74,7 +100,7 @@ def main() -> None:
         import_sle_module(module)
     argcomplete.autocomplete(PARSER)
     args = PARSER.parse_args()
-    global_logger_config(verbose=args.debug or config.common.debug)
+    global_logger_config(verbose=args.debug or config["debug"])
     log.debug(f"{config_dir=}")
     if "func" in vars(args):
         # Run a subprogramm only if the parser detected it correctly.

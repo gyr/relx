@@ -1,5 +1,6 @@
 import argparse
 import datetime
+from typing import Dict, Any
 
 from relx.utils.logger import logger_setup
 from relx.utils.tools import (
@@ -81,7 +82,7 @@ EOF
         print(formated_line)
 
 
-def build_parser(parent_parser, config) -> None:
+def build_parser(parent_parser, config: Dict[str, Any]) -> None:
     """
     Builds the parser for this script. This is executed by the main CLI
     dynamically.
@@ -96,9 +97,9 @@ def build_parser(parent_parser, config) -> None:
         "--project",
         "-p",
         dest="project",
-        help=f"OBS/IBS project (DEFAULT = {config.common.default_project}).",
+        help=f"OBS/IBS project (DEFAULT = {config['default_project']}).",
         type=str,
-        default=config.common.default_project,
+        default=config["default_project"],
     )
     subparser.add_argument(
         "--type",
@@ -124,7 +125,7 @@ def build_parser(parent_parser, config) -> None:
     subparser.set_defaults(func=main)
 
 
-def main(args, config) -> None:
+def main(args, config: Dict[str, Any]) -> None:
     """
     Main method that get the list of all artifacts from a given OBS project
 

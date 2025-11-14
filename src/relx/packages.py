@@ -3,6 +3,7 @@ from lxml import etree
 from rich.console import Console
 from rich.table import Table
 from subprocess import CalledProcessError
+from typing import Dict, Any
 
 from relx.users import get_groups, get_users
 from relx.utils.logger import logger_setup
@@ -118,7 +119,7 @@ def get_bugowner_info(api_url: str, user: str, is_group: bool) -> dict:
         raise RuntimeError(f"{user} not found.") from e
 
 
-def build_parser(parent_parser, config) -> None:
+def build_parser(parent_parser, config: Dict[str, Any]) -> None:
     """
     Builds the parser for this script. This is executed by the main CLI
     dynamically.
@@ -134,23 +135,23 @@ def build_parser(parent_parser, config) -> None:
         "--project",
         "-p",
         dest="project",
-        help=f"OBS/IBS project (DEFAULT = {config.common.default_project}).",
+        help=f"OBS/IBS project (DEFAULT = {config['default_project']}).",
         type=str,
-        default=f"{config.common.default_project}",
+        default=config["default_project"],
     )
     subparser.add_argument(
         "--product",
         "-P",
         dest="product",
-        help=f"OBS/IBS product (DEFAULT = {config.common.default_product}).",
+        help=f"OBS/IBS product (DEFAULT = {config['default_product']}).",
         type=str,
-        default=f"{config.common.default_product}",
+        default=config["default_product"],
     )
     subparser.add_argument("binary_name", nargs="+", type=str, help="Binary name.")
     subparser.set_defaults(func=main)
 
 
-def main(args, config) -> None:
+def main(args, config: Dict[str, Any]) -> None:
     """
     Main method that get the OBS user from the bugowner for the given binary package.
 
@@ -161,18 +162,13 @@ def main(args, config) -> None:
     for binary in args.binary_name:
         try:
             table = Table(title=binary, show_header=False)
-            if args.project == config.common.default_project:
-                build_project = config.packages.get_build_project(config)
-            else:
-                build_project = f"{args.project}:Build"
-            source_package = get_source_package(
-                args.osc_instance, build_project, binary
-            )
+            source_package = get_source_package(args.osc_instance, args.project, binary)
             table.add_row("Source package", source_package)
             if is_shipped(
                 args.osc_instance,
                 binary,
-                config.packages.get_productcomposer(config),
+                config["default_product"]
+                + config["packages"]["default_productcomposer"],
             ):
                 table.add_row("Shipped", f"YES - {args.product}")
             else:
