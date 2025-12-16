@@ -167,8 +167,7 @@ def main(args, config: Dict[str, Any]) -> None:
             if is_shipped(
                 args.osc_instance,
                 binary,
-                config["default_product"]
-                + config["packages"]["default_productcomposer"],
+                config["default_product"] + config["default_productcomposer"],
             ):
                 table.add_row("Shipped", f"YES - {args.product}")
             else:
