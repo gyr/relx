@@ -43,7 +43,7 @@ def print_panel(lines: list[str], title: str = "") -> None:
 
 @running_spinner_decorator
 def list_requests(
-    api_url: str, project: str, is_bugowner_request: bool = False
+    api_url: str, project: str, staging: str = None, is_bugowner_request: bool = False
 ) -> list[tuple[str, str]]:
     """
     List all source packages from a OBS project
@@ -58,9 +58,14 @@ def list_requests(
         command.append(
             f"/search/request?match=state/@name='review' and action/@type='set_bugowner' and action/target/@project='{project}'&withhistory=0&withfullhistory=0"
         )
-    else:
+    elif staging:
+        project = f"{project}:Staging:{staging}"
         command.append(
             f"/search/request?match=state/@name='review' and review/@state='new' and review/@by_project='{project}'&withhistory=0&withfullhistory=0"
+        )
+    else:
+        command.append(
+            f"/search/request?match=state/@name='review' and review/@state='new' and target/@project='{project}'&withhistory=0&withfullhistory=0"
         )
     result = run_command(command)
 
@@ -143,7 +148,7 @@ def build_parser(parent_parser, config: Dict[str, Any]) -> None:
         default=config["default_project"],
     )
     # Mutually exclusive group within the subparser
-    group = subparser.add_mutually_exclusive_group(required=True)
+    group = subparser.add_mutually_exclusive_group()
     group.add_argument(
         "--staging", "-s", dest="staging", type=valid_staging, help="Staging letter."
     )
@@ -162,10 +167,9 @@ def main(args, config: Dict[str, Any]) -> None:
     """
     requests = []
     # Parse arguments
-    project = args.project
-    if args.staging:
-        project = f"{project}:Staging:{args.staging}"
-    requests = list_requests(args.osc_instance, project, args.bugowner)
+    requests = list_requests(
+        args.osc_instance, args.project, args.staging, args.bugowner
+    )
 
     print_panel(show_request_list(requests), "Request Reviews")
     total_requests = len(requests)

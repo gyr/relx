@@ -16,7 +16,9 @@ from relx.utils.logger import logger_setup, global_logger_config
 # --- Configuration ---
 # Explicitly load .env from the project root for developer convenience.
 # This is safer than a broad search and does nothing if the .env file doesn't exist.
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+project_root = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 dotenv_path = os.path.join(project_root, ".env")
 load_dotenv(dotenv_path=dotenv_path)
 
