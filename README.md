@@ -4,15 +4,9 @@
 
 ## Installation
 
-
-
 To install `relx`, ensure you have Python 3.6 or newer installed.
 
-
-
 From the project's root directory (where `pyproject.toml` is located), you can install it in one of the following ways:
-
-
 
 1.  **Install in editable mode (for development):**
 
@@ -30,8 +24,6 @@ From the project's root directory (where `pyproject.toml` is located), you can i
 
     This allows you to make changes to the source code and have the changes reflected immediately without reinstallation.
 
-
-
 2.  **Install as a regular package:**
 
     ```bash
@@ -46,15 +38,9 @@ From the project's root directory (where `pyproject.toml` is located), you can i
 
     ```
 
-
-
 ## Usage
 
-
-
 Once installed, you can use the `relx` command.
-
-
 
 *   **Get general help:**
 
@@ -63,8 +49,6 @@ Once installed, you can use the `relx` command.
     relx --help
 
     ```
-
-
 
 *   **Subcommands:**
 
@@ -80,485 +64,164 @@ Once installed, you can use the `relx` command.
 
     ```
 
-
-
 *   **Common arguments:**
 
     The main `relx` command also accepts global arguments like `--osc-instance` and `--osc-config`.
 
-
-
 ## Configuration
-
-
-
-
-
-
 
 `relx` uses a `config.yaml` file for its configuration. An example configuration file is provided at `config_files/config.yaml` within this repository.
 
-
-
-
-
-
-
 To use `relx`, you should copy this example configuration file to your user configuration directory. By default, `relx` looks for `config.yaml` in `${XDG_CONFIG_HOME}/relx/` (which usually defaults to `~/.config/relx/`).
-
-
-
-
-
-
 
 1.  **Copy the example configuration:**
 
-
-
-
-
-
-
     ```bash
-
-
-
-
-
-
 
     mkdir -p "${XDG_CONFIG_HOME:-~/.config}/relx/"
 
-
-
-
-
-
-
     cp config_files/config.yaml "${XDG_CONFIG_HOME:-~/.config}/relx/config.yaml"
 
-
-
-
-
-
-
     ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 2.  **Customize the configuration:**
-
-
-
-
-
-
 
     Edit `${XDG_CONFIG_HOME:-~/.config}/relx/config.yaml` to match your environment and preferences. Key sections include:
 
-
-
-
-
-
-
     *   `common`: General settings like `api_url`, `default_project`, and `debug` mode.
-
-
-
-
-
-
 
     *   `artifacts`: Configuration for listing artifacts, including repository names and patterns.
 
-
-
-
-
-
-
     *   `packages`: Settings related to package information, such as `default_productcomposer`.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 3.  **`RELX_CONF_DIR` Environment Variable (Optional):**
 
-
-
-
-
-
-
     If you prefer to store your `config.yaml` in a different location, you can set the `RELX_CONF_DIR` environment variable to point to that directory. For example:
 
-
-
-
-
-
-
     ```bash
-
-
-
-
-
-
 
     export RELX_CONF_DIR=/path/to/your/custom_config_directory
 
-
-
-
-
-
-
     ```
-
-
-
-
-
-
 
     If `RELX_CONF_DIR` is set, `relx` will use that path instead of the default `${XDG_CONFIG_HOME}/relx/`.
 
-
-
 ## Development
-
-
 
 ### Linting and Formatting
 
-
-
-
-
-
-
 This project uses `ruff` for linting and formatting. To ensure code quality and consistency, please run the following commands before submitting any changes:
-
-
-
-
-
-
 
 *   **Run the linter:**
 
-
-
-
-
-
-
     ```bash
 
-
-
     # with ruff
-
-
 
     ruff check .
 
-
-
     # with uv
-
-
 
     uv run ruff check .
 
-
-
     ```
-
-
-
-
-
-
 
 *   **Run the formatter:**
 
-
-
-
-
-
-
     ```bash
-
-
 
     # with ruff
 
-
-
     ruff format .
 
-
-
     # with uv
-
-
 
         uv run ruff format .
 
-
-
         ```
-
-
-
-    
-
-
 
     ### Testing
 
-
-
-    
-
-
-
     This project uses Python's built-in `unittest` framework for testing. Tests are located in the `tests/` directory.
-
-
-
-    
-
-
 
     To run the full test suite, use the following command from the project's root directory:
 
-
-
-    
-
-
-
     ```bash
-
-
 
     # with standard python
 
-
-
     python -m unittest discover
-
-
-
-    
-
-
 
     # with uv
 
-
-
     uv run python -m unittest discover
-
-
 
     ```
 
+    ### Type Checking
 
+    This project uses `mypy` for static type checking. To ensure type consistency and catch potential errors early, run the type checker:
 
-    
+    *   **Run the type checker:**
 
+        ```bash
+        uv run mypy src/
+        ```
 
+        Note: `mypy` might require additional stub packages (e.g., `types-PyYAML`, `lxml-stubs`) to be installed for full functionality. These stubs are automatically installed in the CI pipeline. For local development, you might need to install them via `uv pip install <stub-package-name>` or use `mypy --install-types`.
 
     ### Dependency Management
 
-
-
-
-
-
-
 This project uses `uv` for managing Python dependencies, with `pyproject.toml` defining direct dependencies and `uv.lock` ensuring reproducible environments.
-
-
-
-
-
-
 
 **Key Concepts:**
 
-
-
 *   `pyproject.toml`: Defines your project's direct dependencies and their version constraints. This is your primary source of truth for *what* your project needs.
-
-
 
 *   `uv.lock`: A generated file that records the *exact* versions and cryptographic hashes of all direct and transitive dependencies. This ensures reproducible installations across all environments. **Do not edit this file manually.**
 
-
-
-
-
-
-
 **Workflow:**
-
-
-
-
-
-
 
 1.  **Install/Sync Dependencies:** To install all dependencies exactly as specified in `uv.lock` (e.g., after cloning the repository):
 
-
-
     ```bash
-
-
 
     uv sync
 
-
-
     ```
-
-
-
-
-
-
 
 2.  **Add a New Dependency:** To add a new package to your project:
 
-
-
     ```bash
-
-
 
     uv pip install <package-name>
 
-
-
     # Example: uv pip install "requests<3"
 
-
-
     ```
-
-
 
     This command will automatically update `pyproject.toml`, resolve the new dependency tree, update `uv.lock`, and install the package into your virtual environment.
 
+3.  **Manage `uv.lock` Updates and Dependency Upgrades:**
 
+    *   **After Manual `pyproject.toml` Changes (or adding/removing dependencies):** If you edit `pyproject.toml`, you need to re-generate `uv.lock`. This command updates the lock file without forcing upgrades of unaffected dependencies:
 
+        ```bash
 
+        uv pip compile pyproject.toml
 
+        ```
 
+        Then, synchronize your virtual environment: `uv sync`
 
-3.  **Update Existing Dependencies:** To upgrade all packages to the latest versions allowed by `pyproject.toml`:
+    *   **To Upgrade All Dependencies:** To upgrade all packages to the latest versions allowed by `pyproject.toml` (e.g., for security updates or new features), you should run:
 
+        ```bash
 
+        uv pip compile pyproject.toml --upgrade
 
-    ```bash
+        ```
 
-
-
-    # First, update the lock file to reflect the latest compatible versions
-
-
-
-    uv pip compile pyproject.toml --upgrade
-
-
-
-
-
-
-
-    # Then, update your virtual environment to match the new lock file
-
-
-
-    uv sync
-
-
-
-    ```
-
-
-
-
-
-
-
-4.  **Update `uv.lock` after Manual `pyproject.toml` Changes:** If you manually edit `pyproject.toml` (e.g., changing a version constraint or removing a dependency line), you need to re-generate `uv.lock`:
-
-
-
-    ```bash
-
-
-
-    # Re-generate uv.lock based on pyproject.toml
-
-
-
-    uv pip compile pyproject.toml
-
-
-
-
-
-
-
-    # Then, update your virtual environment to match the new lock file
-
-
-
-    uv sync
-
-
-
-    ```
-
-
-
-
-
-
+        Then, synchronize your virtual environment: `uv sync`
 
 5.  **Version Control:** Always commit both `pyproject.toml` and `uv.lock` to your Git repository to ensure consistent environments for all contributors and deployments.
 
@@ -587,5 +250,4 @@ For development, it's convenient to use a `.env` file in the project root to man
         ```bash
         python -m relx.cli --help
         ```
-
 
