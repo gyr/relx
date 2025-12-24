@@ -332,7 +332,63 @@ This project uses `ruff` for linting and formatting. To ensure code quality and 
 
 
 
-    uv run ruff format .
+        uv run ruff format .
+
+
+
+        ```
+
+
+
+    
+
+
+
+    ### Testing
+
+
+
+    
+
+
+
+    This project uses Python's built-in `unittest` framework for testing. Tests are located in the `tests/` directory.
+
+
+
+    
+
+
+
+    To run the full test suite, use the following command from the project's root directory:
+
+
+
+    
+
+
+
+    ```bash
+
+
+
+    # with standard python
+
+
+
+    python -m unittest discover
+
+
+
+    
+
+
+
+    # with uv
+
+
+
+    uv run python -m unittest discover
 
 
 
@@ -340,11 +396,11 @@ This project uses `ruff` for linting and formatting. To ensure code quality and 
 
 
 
+    
 
 
 
-
-### Dependency Management
+    ### Dependency Management
 
 
 

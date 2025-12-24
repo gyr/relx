@@ -19,11 +19,18 @@ class OBSArtifactProvider:
     """
 
     def __init__(
-        self, api_url: str, invalid_start: list[str], invalid_extensions: list[str]
+        self,
+        api_url: str,
+        invalid_start: list[str],
+        invalid_extensions: list[str],
+        command_runner=run_command,
+        stream_runner=run_command_and_stream_output,
     ):
         self.api_url = api_url
         self.invalid_start = invalid_start
         self.invalid_extensions = invalid_extensions
+        self._run_command = command_runner
+        self._stream_runner = stream_runner
 
     @running_spinner_decorator
     def list_packages(self, project: str) -> List[str]:
@@ -32,7 +39,7 @@ class OBSArtifactProvider:
         """
         log.debug("Listing packages for project: %s", project)
         command = f"osc -A {self.api_url} ls {project}"
-        output = run_command(command.split())
+        output = self._run_command(command.split())
         return output.stdout.split()
 
     def list_artifacts(
@@ -57,7 +64,7 @@ class OBSArtifactProvider:
                     "-c",
                     f"osc -A {self.api_url} ls {project} {package} -b -r {repo_info['name']}",
                 ]
-                for line in run_command_and_stream_output(command):
+                for line in self._stream_runner(command):
                     line = line.strip()
                     if not line.startswith(
                         tuple(self.invalid_start)
