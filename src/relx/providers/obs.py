@@ -1,6 +1,5 @@
 import re
-from typing import Dict, List, Generator
-from rich.progress import Progress, TaskID
+from typing import Dict, List, Generator, Optional, Callable
 
 from relx.utils.logger import logger_setup
 from relx.utils.tools import (
@@ -47,8 +46,7 @@ class OBSArtifactProvider:
         project: str,
         packages: List[str],
         repo_info: Dict[str, str],
-        progress: Progress,
-        task_id: TaskID,
+        progress_callback: Optional[Callable[[], None]] = None,
     ) -> Generator[str, None, None]:
         """
         List all artifacts filtered by pattern from a OBS project.
@@ -71,4 +69,5 @@ class OBSArtifactProvider:
                     ) and not line.startswith(f"{repo_info['name']}/"):
                         if not line.endswith(tuple(self.invalid_extensions)):
                             yield line
-            progress.update(task_id, advance=1)
+            if progress_callback:
+                progress_callback()

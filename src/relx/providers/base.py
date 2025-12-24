@@ -2,8 +2,7 @@
 This module defines the base protocol for all provider implementations.
 """
 
-from typing import Dict, List, Generator, Protocol
-from rich.progress import Progress, TaskID
+from typing import Dict, List, Generator, Protocol, Optional, Callable
 
 
 class ArtifactProvider(Protocol):
@@ -25,8 +24,7 @@ class ArtifactProvider(Protocol):
         project: str,
         packages: List[str],
         repo_info: Dict[str, str],
-        progress: Progress,
-        task_id: TaskID,
+        progress_callback: Optional[Callable[[], None]] = None,
     ) -> Generator[str, None, None]:
         """
         List all artifacts for the given packages and repository info.
@@ -34,8 +32,7 @@ class ArtifactProvider(Protocol):
         :param project: The project identifier.
         :param packages: A list of source packages to inspect.
         :param repo_info: A dictionary with repository-specific information.
-        :param progress: A rich.progress.Progress instance for UI feedback.
-        :param task_id: A rich.progress.TaskID for updating the progress bar.
+        :param progress_callback: An optional callback to signal progress.
         :return: A generator that yields artifact strings.
         """
         ...

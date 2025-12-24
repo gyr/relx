@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 from relx.providers.obs import OBSArtifactProvider
 
@@ -41,58 +41,68 @@ class TestOBSArtifactProvider(unittest.TestCase):
         )
         self.assertEqual(packages, ["package-a", "package-b", "package-c"])
 
-    def test_list_artifacts_filtering_and_command(self):
+    def test_list_artifacts_filtering_and_callback(self):
         """
-        Verifies that list_artifacts correctly filters results and calls the stream runner.
+        Verifies that list_artifacts correctly filters results and calls the callback.
         """
         # Arrange
-        # Mock the progress bar objects, as they are passed directly
-        mock_progress = MagicMock()
-        mock_task_id = MagicMock()
+        mock_progress_callback = MagicMock()
 
-        # Simulate the streamed output from the command runner
-        self.mock_stream_runner.return_value = iter(
-            [
-                "artifact-1.rpm",
-                "repo/should_be_filtered.txt",
-                "artifact-2.iso",
-                "artifact-3.sig",  # Should be filtered by extension
-                "artifact-4.qcow2",
-                "artifact-5.meta",  # Should be filtered by extension
-            ]
-        )
+        # Each call to the stream runner should return a new iterator.
+        # Using side_effect is the correct way to mock this.
+        self.mock_stream_runner.side_effect = [
+            iter(
+                [
+                    "artifact-1.rpm",
+                    "repo/should_be_filtered.txt",
+                ]
+            ),
+            iter(
+                [
+                    "artifact-2.iso",
+                    "artifact-3.sig",  # Should be filtered
+                ]
+            ),
+        ]
 
-        packages_to_check = ["package-a"]
+        packages_to_check = ["package-a", "package-b"]
         repo_info = {"name": "repo", "pattern": ".*"}
 
         # Act
-        # The method returns a generator, so we consume it into a list
         artifacts = list(
             self.provider.list_artifacts(
                 project="fake:project",
                 packages=packages_to_check,
                 repo_info=repo_info,
-                progress=mock_progress,
-                task_id=mock_task_id,
+                progress_callback=mock_progress_callback,
             )
         )
 
         # Assert
-        # 1. Check that the correct command was executed
-        expected_command = [
-            "/bin/bash",
-            "-c",
-            "osc -A https://api.fake.obs ls fake:project package-a -b -r repo",
+        # 1. Check that the command was executed for each package that matches the pattern
+        expected_calls = [
+            call(
+                [
+                    "/bin/bash",
+                    "-c",
+                    "osc -A https://api.fake.obs ls fake:project package-a -b -r repo",
+                ]
+            ),
+            call(
+                [
+                    "/bin/bash",
+                    "-c",
+                    "osc -A https://api.fake.obs ls fake:project package-b -b -r repo",
+                ]
+            ),
         ]
-        self.mock_stream_runner.assert_called_once_with(expected_command)
+        self.mock_stream_runner.assert_has_calls(expected_calls)
 
         # 2. Check that the output was filtered correctly
-        self.assertEqual(
-            artifacts, ["artifact-1.rpm", "artifact-2.iso", "artifact-4.qcow2"]
-        )
+        self.assertEqual(artifacts, ["artifact-1.rpm", "artifact-2.iso"])
 
-        # 3. Verify the progress bar was updated
-        mock_progress.update.assert_called_once_with(mock_task_id, advance=1)
+        # 3. Verify the progress callback was called for each package
+        self.assertEqual(mock_progress_callback.call_count, len(packages_to_check))
 
 
 if __name__ == "__main__":

@@ -56,8 +56,7 @@ class TestArtifactsSubcommand(unittest.TestCase):
             project="fake_project",
             packages=["package1", "package2"],
             repo_info={"name": "repo1", "pattern": ".*"},
-            progress=ANY,  # We check that a progress object was passed
-            task_id=ANY,  # We check that a task_id was passed
+            progress_callback=ANY,  # We check that a callback was passed
         )
 
         # 6. Verify the final output was printed correctly
