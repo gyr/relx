@@ -4,7 +4,7 @@ from lxml import etree
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from relx.utils.logger import logger_setup
 from relx.utils.tools import (
@@ -43,7 +43,10 @@ def print_panel(lines: list[str], title: str = "") -> None:
 
 @running_spinner_decorator
 def list_requests(
-    api_url: str, project: str, staging: str = None, is_bugowner_request: bool = False
+    api_url: str,
+    project: str,
+    staging: Optional[str] = None,
+    is_bugowner_request: bool = False,
 ) -> list[tuple[str, str]]:
     """
     List all source packages from a OBS project
@@ -78,12 +81,16 @@ def list_requests(
         if state_tag is not None and state_tag.get("name") == "review":
             relmgr_review = request.find("review[@by_group='sle-release-managers']")
             if relmgr_review is not None and relmgr_review.get("state") == "new":
-                request_tuple = (
-                    request.get("id"),
-                    request.find("action/target").get("package"),
-                )
-                log.debug(f"{request_tuple=}")
-                requests.append(request_tuple)
+                request_id = request.get("id")
+                target_action = request.find("action/target")
+                package_name = None
+                if target_action is not None:
+                    package_name = target_action.get("package")
+
+                if request_id is not None and package_name is not None:
+                    request_tuple = (request_id, package_name)
+                    log.debug(f"{request_tuple=}")
+                    requests.append(request_tuple)
     return requests
 
 

@@ -93,20 +93,21 @@ def run_command_and_stream_output(command: list[str]) -> Generator:
         with subprocess.Popen(
             command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
         ) as process:
-            for line in iter(process.stdout.readline, ""):
-                line = line.strip()
-                if line:
-                    log.debug(">> %s", line)
-                    yield line
-            stderr = ""
-            for line in iter(process.stderr.readline, ""):
-                stderr.join(line)
+            if process.stdout:
+                for line in iter(process.stdout.readline, ""):
+                    line = line.strip()
+                    if line:
+                        log.debug(">> %s", line)
+                        yield line
+            stderr_lines = []
+            if process.stderr:
+                for line in iter(process.stderr.readline, ""):
+                    stderr_lines.append(line)
+            stderr = "".join(stderr_lines)
             if process.returncode != 0:
                 log.debug("Failed to execute: %s", command)
                 log.debug("Return code: %s", process.returncode)
                 log.debug("Stderr: %s", stderr)
-
-            return process.returncode, stderr
     except FileNotFoundError:
         log.error("%s not found", command[0])
         raise
@@ -129,12 +130,13 @@ def pager_command(command: list[str], output) -> None:
         # Use less as the pager
         pager = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=sys.stdout)
         try:
-            if isinstance(output, str):  # Handle single string or list of strings
-                pager.stdin.write(output.encode())
-            elif isinstance(output, list):
-                for line in output:
-                    pager.stdin.write((line + "\n").encode())
-            pager.stdin.close()
+            if pager.stdin:  # Add check for stdin
+                if isinstance(output, str):  # Handle single string or list of strings
+                    pager.stdin.write(output.encode())
+                elif isinstance(output, list):
+                    for line in output:
+                        pager.stdin.write((line + "\n").encode())
+                pager.stdin.close()
             pager.wait()
         except KeyboardInterrupt:  # Allow user to exit less with Ctrl+C
             pass

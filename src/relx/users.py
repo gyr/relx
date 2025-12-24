@@ -3,7 +3,7 @@ from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
 from subprocess import CalledProcessError
-from typing import Generator
+from typing import Generator, Optional
 
 from relx.utils.logger import logger_setup
 from relx.utils.tools import (
@@ -16,7 +16,9 @@ log = logger_setup(__name__)
 
 
 @running_spinner_decorator
-def get_groups(api_url: str, group: str, is_fulllist: bool = False) -> dict:
+def get_groups(
+    api_url: str, group: str, is_fulllist: bool = False
+) -> dict[str, Optional[str] | list[Optional[str]]]:
     """
     Given a group name return the OBS info about it."
 
@@ -28,7 +30,7 @@ def get_groups(api_url: str, group: str, is_fulllist: bool = False) -> dict:
         command = f"osc -A {api_url} api /group/{group}"
         output = run_command(command.split())
         tree = etree.fromstring(output.stdout.encode())
-        info = {}
+        info: dict[str, Optional[str] | list[Optional[str]]] = {}
 
         title = tree.find("title")
         info["Group"] = title.text if title is not None else None
@@ -59,7 +61,7 @@ def get_users(
     is_login: bool = True,
     is_email: bool = False,
     is_realname: bool = False,
-) -> Generator:
+) -> Generator[dict[str, Optional[str]], None, None]:
     """
     Given a source package return the OBS user of the bugowner"
 
@@ -91,11 +93,16 @@ def get_users(
         if not people:
             raise RuntimeError(f"{search_text} not found.")
         for person in people:
+            login_tag = person.find("login")
+            email_tag = person.find("email")
+            realname_tag = person.find("realname")
+            state_tag = person.find("state")
+
             info = {
-                "User": person.find("login").text,
-                "Email": person.find("email").text,
-                "Name": person.find("realname").text,
-                "State": person.find("state").text,
+                "User": login_tag.text if login_tag is not None else None,
+                "Email": email_tag.text if email_tag is not None else None,
+                "Name": realname_tag.text if realname_tag is not None else None,
+                "State": state_tag.text if state_tag is not None else None,
             }
             yield info
     except CalledProcessError as e:
