@@ -1,6 +1,5 @@
 import unittest
 from unittest.mock import MagicMock
-from subprocess import CalledProcessError
 
 from relx.providers.obs_user import OBSUserProvider
 
@@ -86,12 +85,10 @@ class TestOBSUserProvider(unittest.TestCase):
         Verifies that get_group raises RuntimeError when group is not found.
         """
         # Arrange
-        self.mock_command_runner.side_effect = CalledProcessError(
-            returncode=1, cmd="osc api /group/non-existent"
-        )
+        self.mock_command_runner.side_effect = RuntimeError("Mocked command failed")
 
         # Act & Assert
-        with self.assertRaisesRegex(RuntimeError, "non-existent not found."):
+        with self.assertRaisesRegex(RuntimeError, "Mocked command failed"):
             self.provider.get_group(group="non-existent")
 
     # --- Test cases for get_user ---
@@ -223,12 +220,10 @@ class TestOBSUserProvider(unittest.TestCase):
         Verifies that get_user raises RuntimeError on CalledProcessError.
         """
         # Arrange
-        self.mock_command_runner.side_effect = CalledProcessError(
-            returncode=1, cmd="osc api /search/person?match=@login='error'"
-        )
+        self.mock_command_runner.side_effect = RuntimeError("Mocked command failed")
 
         # Act & Assert
-        with self.assertRaisesRegex(RuntimeError, "error not found."):
+        with self.assertRaisesRegex(RuntimeError, "Mocked command failed"):
             list(self.provider.get_user(search_text="error", search_by="login"))
 
     def test_get_user_invalid_search_by(self):

@@ -5,7 +5,6 @@ from relx.utils.logger import logger_setup
 from relx.utils.tools import (
     run_command,
     run_command_and_stream_output,
-    running_spinner_decorator,
 )
 
 log = logger_setup(__name__)
@@ -31,14 +30,13 @@ class OBSArtifactProvider:
         self._run_command = command_runner
         self._stream_runner = stream_runner
 
-    @running_spinner_decorator
     def list_packages(self, project: str) -> List[str]:
         """
         List all source packages from an OBS project.
         """
         log.debug("Listing packages for project: %s", project)
-        command = f"osc -A {self.api_url} ls {project}"
-        output = self._run_command(command.split())
+        command_args = ["osc", "-A", self.api_url, "ls", project]
+        output = self._run_command(command_args)
         return output.stdout.split()
 
     def list_artifacts(

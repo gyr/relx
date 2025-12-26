@@ -1,6 +1,5 @@
 import re
 from lxml import etree
-from subprocess import CalledProcessError
 from typing import List, Any, Callable
 
 from .base import PackageProvider
@@ -92,21 +91,18 @@ class OBSPackageProvider(PackageProvider):
         ]
         bugowners = []
         is_group = False
-        try:
-            output = self._run_command(command_args)
-            tree = etree.fromstring(output.stdout.encode())
-            people = tree.findall("owner/person")
-            if len(people) != 0:
-                bugowners = [person.get("name") for person in people]
-                return bugowners, is_group
-
-            groups = tree.findall("owner/group")
-            if len(groups) != 0:
-                is_group = True
-                bugowners = [group.get("name") for group in groups]
-                return bugowners, is_group
-
-            log.debug("No bugowner found for %s.", package)
+        output = self._run_command(command_args)
+        tree = etree.fromstring(output.stdout.encode())
+        people = tree.findall("owner/person")
+        if len(people) != 0:
+            bugowners = [person.get("name") for person in people]
             return bugowners, is_group
-        except CalledProcessError as e:
-            raise RuntimeError(f"{package} has no bugowner") from e
+
+        groups = tree.findall("owner/group")
+        if len(groups) != 0:
+            is_group = True
+            bugowners = [group.get("name") for group in groups]
+            return bugowners, is_group
+
+        log.debug("No bugowner found for %s.", package)
+        return bugowners, is_group

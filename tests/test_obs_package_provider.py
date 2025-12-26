@@ -1,6 +1,5 @@
 import unittest
 from unittest.mock import MagicMock
-from subprocess import CalledProcessError
 
 from relx.providers.obs_package import OBSPackageProvider
 
@@ -203,10 +202,10 @@ class TestOBSPackageProvider(unittest.TestCase):
         Verifies get_bugowner raises RuntimeError on command error.
         """
         # Arrange
-        self.mock_command_runner.side_effect = CalledProcessError(1, "cmd")
+        self.mock_command_runner.side_effect = RuntimeError("Mocked command failed")
 
         # Act & Assert
-        with self.assertRaisesRegex(RuntimeError, "source-package has no bugowner"):
+        with self.assertRaisesRegex(RuntimeError, "Mocked command failed"):
             self.provider.get_bugowner(package="source-package")
 
 

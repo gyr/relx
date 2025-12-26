@@ -98,9 +98,18 @@ class OBSReviewProvider(ReviewProvider):
         if is_bugowner:
             groups.append("sle-staging-managers")
         for group in groups:
-            command = (
-                f"osc -A {self.api_url} review accept -m 'OK' -G {group} {request_id}"
-            )
-            output = self._run_command(command.split())
+            command_args = [
+                "osc",
+                "-A",
+                self.api_url,
+                "review",
+                "accept",
+                "-m",
+                "OK",  # Pass "OK" directly as an argument
+                "-G",
+                group,
+                request_id,
+            ]
+            output = self._run_command(command_args)
             lines.append(f"{group}: {output.stdout}")
         return lines

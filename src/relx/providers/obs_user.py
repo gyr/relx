@@ -1,5 +1,4 @@
 from lxml import etree
-from subprocess import CalledProcessError
 from typing import Dict, List, Generator, Optional, Callable, Any
 
 from relx.utils.logger import logger_setup
@@ -34,33 +33,29 @@ class OBSUserProvider(UserProvider):
         :param is_fulllist: If True, return full list of people in the group.
         :return: OBS group info
         """
-        try:
-            command_args = ["osc", "-A", self.api_url, "api", f"/group/{group}"]
-            output = self._run_command(command_args)
-            tree = etree.fromstring(output.stdout.encode())
-            info: Dict[str, Optional[str] | List[Optional[str]]] = {}
+        command_args = ["osc", "-A", self.api_url, "api", f"/group/{group}"]
+        output = self._run_command(command_args)
+        tree = etree.fromstring(output.stdout.encode())
+        info: Dict[str, Optional[str] | List[Optional[str]]] = {}
 
-            title = tree.find("title")
-            info["Group"] = title.text if title is not None else None
+        title = tree.find("title")
+        info["Group"] = title.text if title is not None else None
 
-            email = tree.find("email")
-            info["Email"] = email.text if email is not None else None
+        email = tree.find("email")
+        info["Email"] = email.text if email is not None else None
 
-            maintainers = tree.findall("maintainer")
-            info["Maintainers"] = [tag.get("userid") for tag in maintainers]
+        maintainers = tree.findall("maintainer")
+        info["Maintainers"] = [tag.get("userid") for tag in maintainers]
 
-            if is_fulllist:
-                people = tree.findall("person")
-                users = []
-                for person in people:
-                    for user in person.findall("person"):
-                        users.append(user.get("userid"))
-                info["Users"] = users
+        if is_fulllist:
+            people = tree.findall("person")
+            users = []
+            for person in people:
+                for user in person.findall("person"):
+                    users.append(user.get("userid"))
+            info["Users"] = users
 
-            return info
-        except CalledProcessError as e:
-            log.error(f"Error fetching group {group}: {e}")
-            raise RuntimeError(f"{group} not found.") from e
+        return info
 
     def get_user(
         self,
@@ -74,45 +69,41 @@ class OBSUserProvider(UserProvider):
         :param search_by: "login", "email", or "realname"
         :return: OBS user info
         """
-        try:
-            # Manually build the command list to ensure arguments with spaces and
-            # quotes are passed correctly to the subprocess.
-            command_args = ["osc", "-A", self.api_url, "api"]
-            if search_by == "login":
-                command_args.append(f'/search/person?match=@login="{search_text}"')
-            elif search_by == "email":
-                command_args.append(f'/search/person?match=@email="{search_text}"')
-            elif search_by == "realname":
-                command_args.append(
-                    f'/search/person?match=contains(@realname,"{search_text}")'
-                )
-            else:
-                raise ValueError(
-                    "Invalid search_by parameter. Must be 'login', 'email', or 'realname'."
-                )
+        # Manually build the command list to ensure arguments with spaces and
+        # quotes are passed correctly to the subprocess.
+        command_args = ["osc", "-A", self.api_url, "api"]
+        if search_by == "login":
+            command_args.append(f'/search/person?match=@login="{search_text}"')
+        elif search_by == "email":
+            command_args.append(f'/search/person?match=@email="{search_text}"')
+        elif search_by == "realname":
+            command_args.append(
+                f'/search/person?match=contains(@realname,"{search_text}")'
+            )
+        else:
+            raise ValueError(
+                "Invalid search_by parameter. Must be 'login', 'email', or 'realname'."
+            )
 
-            output = self._run_command(command_args)
-            tree = etree.fromstring(output.stdout.encode())
-            people = tree.findall("person")
-            if not people:
-                log.debug(
-                    f"No users found for search text '{search_text}' by '{search_by}'."
-                )
-                return
+        output = self._run_command(command_args)
+        tree = etree.fromstring(output.stdout.encode())
+        people = tree.findall("person")
+        if not people:
+            log.debug(
+                f"No users found for search text '{search_text}' by '{search_by}'."
+            )
+            return
 
-            for person in people:
-                login_tag = person.find("login")
-                email_tag = person.find("email")
-                realname_tag = person.find("realname")
-                state_tag = person.find("state")
+        for person in people:
+            login_tag = person.find("login")
+            email_tag = person.find("email")
+            realname_tag = person.find("realname")
+            state_tag = person.find("state")
 
-                info = {
-                    "User": login_tag.text if login_tag is not None else None,
-                    "Email": email_tag.text if email_tag is not None else None,
-                    "Name": realname_tag.text if realname_tag is not None else None,
-                    "State": state_tag.text if state_tag is not None else None,
-                }
-                yield info
-        except CalledProcessError as e:
-            log.error(f"Error fetching user '{search_text}' by '{search_by}': {e}")
-            raise RuntimeError(f"{search_text} not found.") from e
+            info = {
+                "User": login_tag.text if login_tag is not None else None,
+                "Email": email_tag.text if email_tag is not None else None,
+                "Name": realname_tag.text if realname_tag is not None else None,
+                "State": state_tag.text if state_tag is not None else None,
+            }
+            yield info

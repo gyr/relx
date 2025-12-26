@@ -41,7 +41,9 @@ def run_command(
         # if capture_output is True
         log.error("Stdout: %s", e.stdout)
         log.error("Stderr: %s", e.stderr)
-        raise
+        raise RuntimeError(
+            f"Command '{e.cmd}' failed with exit code {e.returncode}."
+        ) from e
 
 
 def popen_command(command: list[str], text=True) -> str:
@@ -104,10 +106,14 @@ def run_command_and_stream_output(command: list[str]) -> Generator:
                 for line in iter(process.stderr.readline, ""):
                     stderr_lines.append(line)
             stderr = "".join(stderr_lines)
+            process.wait()  # Wait for the process to terminate to get the final return code
             if process.returncode != 0:
                 log.debug("Failed to execute: %s", command)
                 log.debug("Return code: %s", process.returncode)
                 log.debug("Stderr: %s", stderr)
+                raise RuntimeError(
+                    f"Command '{command}' failed with exit code {process.returncode}."
+                )
     except FileNotFoundError:
         log.error("%s not found", command[0])
         raise

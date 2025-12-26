@@ -1,5 +1,6 @@
 from argparse import Namespace
 from rich.progress import Progress
+from rich.console import Console  # NEW IMPORT
 from typing import Dict, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -40,11 +41,13 @@ def main(args: Namespace, config: Dict[str, Any]) -> None:
     :param args: Argparse Namespace that has all the arguments
     :param config: Lua config table
     """
+    console = Console()  # INSTANTIATE CONSOLE
     provider = get_artifact_provider(
         provider_name="obs", api_url=args.osc_instance, config=config
     )
 
-    packages = provider.list_packages(project=args.project)
+    with console.status("[bold green]Fetching package list..."):  # ADD SPINNER
+        packages = provider.list_packages(project=args.project)
 
     total_steps = len(config["artifacts"]["repo_info"]) * len(packages)
     with Progress() as progress:
