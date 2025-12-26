@@ -35,8 +35,8 @@ class OBSUserProvider(UserProvider):
         :return: OBS group info
         """
         try:
-            command = f"osc -A {self.api_url} api /group/{group}"
-            output = self._run_command(command.split())
+            command_args = ["osc", "-A", self.api_url, "api", f"/group/{group}"]
+            output = self._run_command(command_args)
             tree = etree.fromstring(output.stdout.encode())
             info: Dict[str, Optional[str] | List[Optional[str]]] = {}
 
@@ -75,19 +75,23 @@ class OBSUserProvider(UserProvider):
         :return: OBS user info
         """
         try:
-            command_template = f"osc -A {self.api_url} api /search/person?match="
+            # Manually build the command list to ensure arguments with spaces and
+            # quotes are passed correctly to the subprocess.
+            command_args = ["osc", "-A", self.api_url, "api"]
             if search_by == "login":
-                command = command_template + f'@login="{search_text}"'
+                command_args.append(f'/search/person?match=@login="{search_text}"')
             elif search_by == "email":
-                command = command_template + f'@email="{search_text}"'
+                command_args.append(f'/search/person?match=@email="{search_text}"')
             elif search_by == "realname":
-                command = command_template + f'contains(@realname,"{search_text}")'
+                command_args.append(
+                    f'/search/person?match=contains(@realname,"{search_text}")'
+                )
             else:
                 raise ValueError(
                     "Invalid search_by parameter. Must be 'login', 'email', or 'realname'."
                 )
 
-            output = self._run_command(command.split())
+            output = self._run_command(command_args)
             tree = etree.fromstring(output.stdout.encode())
             people = tree.findall("person")
             if not people:
