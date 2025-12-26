@@ -8,7 +8,6 @@ from relx.utils.logger import logger_setup
 from relx.utils.tools import (
     run_command,
     run_command_and_stream_output,
-    running_spinner_decorator,
 )
 
 log = logger_setup(__name__)
@@ -30,7 +29,6 @@ class OBSPackageProvider(PackageProvider):
         self._run_command = command_runner
         self._stream_runner = stream_runner
 
-    @running_spinner_decorator
     def is_shipped(self, package: str, productcomposer: str) -> bool:
         command = [
             "/bin/bash",
@@ -44,7 +42,6 @@ class OBSPackageProvider(PackageProvider):
                 return True
         return False
 
-    @running_spinner_decorator
     def get_source_package(self, project: str, package: str) -> str:
         """
         Get the source package from OBS.
@@ -78,7 +75,6 @@ class OBSPackageProvider(PackageProvider):
             )
         return str(next(iter(source_package)))
 
-    @running_spinner_decorator
     def get_bugowner(self, package: str) -> tuple[list, bool]:
         """
         Given a source package return the OBS user of the bugowner"
