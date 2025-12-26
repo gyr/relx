@@ -101,3 +101,44 @@ class PackageProvider(Protocol):
         :return: A tuple containing a list of bugowners and a boolean indicating if it's a group.
         """
         ...
+
+
+class ReviewProvider(Protocol):
+    """
+    A protocol that defines the interface for a code review provider.
+    """
+
+    def list_requests(
+        self,
+        project: str,
+        staging: Optional[str] = None,
+        is_bugowner_request: bool = False,
+    ) -> list[tuple[str, str]]:
+        """
+        List all requests in a 'review' state.
+
+        :param project: The project to search in.
+        :param staging: The optional staging project letter.
+        :param is_bugowner_request: If True, searches for bugowner requests.
+        :return: A list of (request_id, package_name) tuples.
+        """
+        ...
+
+    def get_request_diff(self, request_id: str) -> str:
+        """
+        Get the diff of a specific review request.
+
+        :param request_id: The ID of the request.
+        :return: A string containing the diff.
+        """
+        ...
+
+    def approve_request(self, request_id: str, is_bugowner: bool) -> list[str]:
+        """
+        Approve a review request.
+
+        :param request_id: The ID of the request to approve.
+        :param is_bugowner: If True, performs the bugowner approval flow.
+        :return: A list of strings representing the output of the approval commands.
+        """
+        ...
