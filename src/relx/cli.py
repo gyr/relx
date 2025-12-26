@@ -101,7 +101,25 @@ def import_sle_module(name: str) -> None:
 
 
 def main() -> None:
-    module_list = ["artifacts", "requests", "reviews", "packages", "users"]
+    # --- Dynamic Module Discovery ---
+    module_list = []
+    # Get the directory of the 'relx' package
+    package_path = os.path.dirname(os.path.abspath(__file__))
+
+    for name in os.listdir(package_path):
+        # Check if it's a python file and not a special/internal module
+        if name.endswith(".py") and not name.startswith("__"):
+            module_name = name[:-3]  # Remove .py extension
+
+            # Exclude specific modules and directories that are not subcommands
+            if module_name in ["cli", "exceptions", "requests"]:
+                continue
+
+            module_list.append(module_name)
+
+    module_list.sort()  # Sort for deterministic order
+    # --- End Discovery ---
+
     for module in module_list:
         import_sle_module(module)
     argcomplete.autocomplete(PARSER)
