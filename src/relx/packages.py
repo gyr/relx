@@ -5,7 +5,7 @@ from rich.table import Table
 from subprocess import CalledProcessError
 from typing import Dict, Any
 
-from relx.users import get_groups, get_users
+from relx.providers import get_user_provider
 from relx.utils.logger import logger_setup
 from relx.utils.tools import (
     run_command,
@@ -104,19 +104,21 @@ def get_bugowner(api_url: str, package: str) -> tuple[list, bool]:
 
 def get_bugowner_info(api_url: str, user: str, is_group: bool) -> dict:
     """
-    Given a source package return the OBS user of the bugowner"
-
+    Given a bugowner, return their OBS info.
     :param api_url: OBS instance
-    :param project: OBS project
-    :param package: binary name
-    :return: source package
+    :param user: bugowner name (user or group)
+    :param is_group: True if the bugowner is a group
+    :return: OBS info dictionary
     """
+    user_provider = get_user_provider(provider_name="obs", api_url=api_url)
     try:
         if is_group:
-            return get_groups(api_url, user)
-        return next(get_users(api_url, user))
-    except CalledProcessError as e:
-        raise RuntimeError(f"{user} not found.") from e
+            return user_provider.get_group(user, is_fulllist=False)
+        else:
+            user_iterator = user_provider.get_user(search_text=user, search_by="login")
+            return next(user_iterator)
+    except (RuntimeError, StopIteration) as e:
+        raise RuntimeError(f"Bugowner '{user}' not found.") from e
 
 
 def build_parser(parent_parser, config: Dict[str, Any]) -> None:

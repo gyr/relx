@@ -1,112 +1,12 @@
-from lxml import etree
 from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
-from subprocess import CalledProcessError
-from typing import Generator, Optional
 
 from relx.utils.logger import logger_setup
-from relx.utils.tools import (
-    run_command,
-    running_spinner_decorator,
-)
+from relx.providers import get_user_provider
 
 
 log = logger_setup(__name__)
-
-
-@running_spinner_decorator
-def get_groups(
-    api_url: str, group: str, is_fulllist: bool = False
-) -> dict[str, Optional[str] | list[Optional[str]]]:
-    """
-    Given a group name return the OBS info about it."
-
-    :param api_url: OBS instance
-    :param group: OBS group name
-    :return: OBS group info
-    """
-    try:
-        command = f"osc -A {api_url} api /group/{group}"
-        output = run_command(command.split())
-        tree = etree.fromstring(output.stdout.encode())
-        info: dict[str, Optional[str] | list[Optional[str]]] = {}
-
-        title = tree.find("title")
-        info["Group"] = title.text if title is not None else None
-
-        email = tree.find("email")
-        info["Email"] = email.text if email is not None else None
-
-        maintainers = tree.findall("maintainer")
-        info["Maintainers"] = [tag.get("userid") for tag in maintainers]
-
-        if is_fulllist:
-            people = tree.findall("person")
-            users = []
-            for person in people:
-                for user in person.findall("person"):
-                    users.append(user.get("userid"))
-            info["Users"] = users
-
-        return info
-    except CalledProcessError as e:
-        raise RuntimeError(f"{group} not found.") from e
-
-
-@running_spinner_decorator
-def get_users(
-    api_url: str,
-    search_text: str,
-    is_login: bool = True,
-    is_email: bool = False,
-    is_realname: bool = False,
-) -> Generator[dict[str, Optional[str]], None, None]:
-    """
-    Given a source package return the OBS user of the bugowner"
-
-    :param api_url: OBS instance
-    :param search_text: Text to be search OBS project for user info
-    :param is_login: Search based on user login
-    :param is_email: Search based on user email
-    :param is_realname: Search based on user name
-    :return: OBS user info
-    """
-    try:
-        if is_login:
-            command = (
-                f'osc -A {api_url} api /search/person?match=@login="{search_text}"'
-            )
-        elif is_email:
-            command = (
-                f'osc -A {api_url} api /search/person?match=@email="{search_text}"'
-            )
-        elif is_realname:
-            command = f'osc -A {api_url} api /search/person?match=contains(@realname,"{search_text}")'
-        else:
-            raise RuntimeError("Invalid user search.")
-
-        output = run_command(command.split())
-        tree = etree.fromstring(output.stdout.encode())
-        info = {}
-        people = tree.findall("person")
-        if not people:
-            raise RuntimeError(f"{search_text} not found.")
-        for person in people:
-            login_tag = person.find("login")
-            email_tag = person.find("email")
-            realname_tag = person.find("realname")
-            state_tag = person.find("state")
-
-            info = {
-                "User": login_tag.text if login_tag is not None else None,
-                "Email": email_tag.text if email_tag is not None else None,
-                "Name": realname_tag.text if realname_tag is not None else None,
-                "State": state_tag.text if state_tag is not None else None,
-            }
-            yield info
-    except CalledProcessError as e:
-        raise RuntimeError(f"{search_text} not found.") from e
 
 
 def build_parser(parent_parser, config) -> None:
@@ -139,28 +39,59 @@ def build_parser(parent_parser, config) -> None:
 
 def main(args, config) -> None:
     """
-    Main method that get the OBS user from the bugowner for the given binary package.
+    Main method that gets OBS user/group information using the UserProvider.
 
     :param args: Argparse Namespace that has all the arguments
     :param config: Lua config table
     """
     console = Console()
     try:
+        user_provider = get_user_provider(
+            provider_name="obs", api_url=args.osc_instance
+        )
         table = Table(show_header=False)
-        if args.group:
-            for key, value in get_groups(
-                args.osc_instance, args.search_text, True
-            ).items():
-                log.debug("%s: %s", key, value)
-                table.add_row(key, str(value))
-        else:
-            for info in get_users(
-                args.osc_instance, args.search_text, args.login, args.email, args.name
-            ):
-                for key, value in info.items():
+
+        with console.status("[bold green]Running..."):
+            if args.group:
+                group_info = user_provider.get_group(
+                    group=args.search_text, is_fulllist=True
+                )
+                for key, value in group_info.items():
                     log.debug("%s: %s", key, value)
                     table.add_row(key, str(value))
-                table.add_row(Rule(style="dim"), Rule(style="dim"))
+            else:
+                search_by = ""
+                if args.login:
+                    search_by = "login"
+                elif args.email:
+                    search_by = "email"
+                elif args.name:
+                    search_by = "realname"
+
+                user_results = list(
+                    user_provider.get_user(
+                        search_text=args.search_text, search_by=search_by
+                    )
+                )
+
+                if not user_results:
+                    console.print(
+                        f"[bold red]Error:[/bold red] User '{args.search_text}' not found."
+                    )
+                    exit(1)
+
+                for info in user_results:
+                    for key, value in info.items():
+                        log.debug("%s: %s", key, value)
+                        table.add_row(key, str(value))
+                    table.add_row(Rule(style="dim"), Rule(style="dim"))
+
         console.print(table)
     except RuntimeError as e:
         log.error(e)
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        exit(1)
+    except ValueError as e:
+        log.error(e)
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        exit(1)

@@ -53,8 +53,8 @@ class OBSUserProvider(UserProvider):
                 people = tree.findall("person")
                 users = []
                 for person in people:
-                    if person.get("userid"):
-                        users.append(person.get("userid"))
+                    for user in person.findall("person"):
+                        users.append(user.get("userid"))
                 info["Users"] = users
 
             return info
