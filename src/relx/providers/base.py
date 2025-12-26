@@ -66,3 +66,38 @@ class UserProvider(Protocol):
         :return: OBS group info
         """
         ...
+
+
+class PackageProvider(Protocol):
+    """
+    A protocol that defines the interface for a package information provider.
+    """
+
+    def is_shipped(self, package: str, productcomposer: str) -> bool:
+        """
+        Checks if a package is shipped in a given product.
+
+        :param package: The package name.
+        :param productcomposer: The product composer project.
+        :return: True if the package is shipped, False otherwise.
+        """
+        ...
+
+    def get_source_package(self, project: str, package: str) -> str:
+        """
+        Get the source package from OBS for a given binary package.
+
+        :param project: The OBS project.
+        :param package: The binary package name.
+        :return: The source package name.
+        """
+        ...
+
+    def get_bugowner(self, package: str) -> tuple[list, bool]:
+        """
+        Get the bugowner for a given package.
+
+        :param package: The package name.
+        :return: A tuple containing a list of bugowners and a boolean indicating if it's a group.
+        """
+        ...
