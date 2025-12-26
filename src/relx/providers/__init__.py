@@ -4,8 +4,9 @@ This module contains the factory for creating provider instances.
 
 from typing import Dict, Any
 
-from .base import ArtifactProvider
-from .obs import OBSArtifactProvider
+from .base import ArtifactProvider, UserProvider
+from .obs_artifact import OBSArtifactProvider
+from .obs_user import OBSUserProvider
 
 
 def get_artifact_provider(
@@ -30,3 +31,21 @@ def get_artifact_provider(
     # Add other providers here in the future
     else:
         raise ValueError(f"Unknown artifact provider: {provider_name}")
+
+
+def get_user_provider(provider_name: str, api_url: str) -> UserProvider:
+    """
+    Factory function to get a UserProvider instance.
+
+    :param provider_name: The name of the provider (e.g., "obs").
+    :param api_url: The API URL for the provider (e.g., OBS instance URL).
+    :return: An instance of a UserProvider.
+    :raises ValueError: If an unknown provider name is given.
+    """
+    if provider_name == "obs":
+        return OBSUserProvider(
+            api_url=api_url,
+        )
+    # Add other providers here in the future
+    else:
+        raise ValueError(f"Unknown user provider: {provider_name}")

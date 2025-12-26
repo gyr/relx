@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, call
 
-from relx.providers.obs import OBSArtifactProvider
+from relx.providers.obs_artifact import OBSArtifactProvider
 
 
 class TestOBSArtifactProvider(unittest.TestCase):
