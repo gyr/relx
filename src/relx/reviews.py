@@ -1,17 +1,14 @@
 import argparse
 import sys
-from lxml import etree
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
+from relx.providers import get_review_provider
 from relx.utils.logger import logger_setup
-from relx.utils.tools import (
-    pager_command,
-    run_command,
-    running_spinner_decorator,
-)
+from relx.utils.tools import pager_command
+# Removed: etree, run_command, running_spinner_decorator
 
 
 log = logger_setup(__name__)
@@ -41,89 +38,7 @@ def print_panel(lines: list[str], title: str = "") -> None:
     console.print(panel)
 
 
-@running_spinner_decorator
-def list_requests(
-    api_url: str,
-    project: str,
-    staging: Optional[str] = None,
-    is_bugowner_request: bool = False,
-) -> list[tuple[str, str]]:
-    """
-    List all source packages from a OBS project
-
-    :param api_url: OBS instance
-    :param project: OBS project
-    :param is_bugowner_request: list bugowner requests
-    :return: list of source packages
-    """
-    command = f"osc -A {api_url} api".split()
-    if is_bugowner_request:
-        command.append(
-            f"/search/request?match=state/@name='review' and action/@type='set_bugowner' and action/target/@project='{project}'&withhistory=0&withfullhistory=0"
-        )
-    elif staging:
-        project = f"{project}:Staging:{staging}"
-        command.append(
-            f"/search/request?match=state/@name='review' and review/@state='new' and review/@by_project='{project}'&withhistory=0&withfullhistory=0"
-        )
-    else:
-        command.append(
-            f"/search/request?match=state/@name='review' and review/@state='new' and target/@project='{project}'&withhistory=0&withfullhistory=0"
-        )
-    result = run_command(command)
-
-    tree = etree.fromstring(result.stdout.encode())
-
-    requests = []
-
-    for request in tree.findall("request"):
-        state_tag = request.find("state")
-        if state_tag is not None and state_tag.get("name") == "review":
-            relmgr_review = request.find("review[@by_group='sle-release-managers']")
-            if relmgr_review is not None and relmgr_review.get("state") == "new":
-                request_id = request.get("id")
-                target_action = request.find("action/target")
-                package_name = None
-                if target_action is not None:
-                    package_name = target_action.get("package")
-
-                if request_id is not None and package_name is not None:
-                    request_tuple = (request_id, package_name)
-                    log.debug(f"{request_tuple=}")
-                    requests.append(request_tuple)
-    return requests
-
-
-def show_request(api_url: str, request: str) -> None:
-    """
-    Show reviewed request details
-
-    :param api_url: OBS instance
-    :param request: request ID
-    """
-    command = f"osc -A {api_url} review show -d {request}"
-    output = run_command(command.split())
-    pager_command(["delta"], output.stdout)
-
-
-@running_spinner_decorator
-def approve_request(api_url: str, request: str, is_bugowner: bool) -> list[str]:
-    """
-    Approve request
-
-    :param api_url: OBS instance
-    :param request: request ID
-    :param bugowner: is a bugowner request
-    """
-    groups: list = ["sle-release-managers"]
-    lines = []
-    if is_bugowner:
-        groups.append("sle-staging-managers")
-    for group in groups:
-        command = f"osc -A {api_url} review accept -m 'OK' -G {group} {request}"
-        output = run_command(command.split())
-        lines.append(f"{group}: {output.stdout}")
-    return lines
+# REMOVED: list_requests, show_request, approve_request functions
 
 
 def show_request_list(requests: list[tuple[str, str]]) -> list[str]:
@@ -167,16 +82,23 @@ def build_parser(parent_parser, config: Dict[str, Any]) -> None:
 
 def main(args, config: Dict[str, Any]) -> None:
     """
-    Main method that get the list of all artifacts from a given OBS project
+    Main method that handles review requests.
 
     :param args: Argparse Namespace that has all the arguments
     :param config: Lua config table
     """
-    requests = []
-    # Parse arguments
-    requests = list_requests(
-        args.osc_instance, args.project, args.staging, args.bugowner
+    console = Console()
+    review_provider = get_review_provider(
+        provider_name="obs", api_url=args.osc_instance
     )
+
+    requests = []
+    with console.status("[bold green]Fetching review requests..."):
+        requests = review_provider.list_requests(
+            project=args.project,
+            staging=args.staging,
+            is_bugowner_request=args.bugowner,
+        )
 
     print_panel(show_request_list(requests), "Request Reviews")
     total_requests = len(requests)
@@ -196,16 +118,21 @@ def main(args, config: Dict[str, Any]) -> None:
             default="y",
         )
         if review_request == "y":
-            show_request(args.osc_instance, request[0])
+            with console.status(f"[bold green]Fetching diff for {request[0]}..."):
+                diff_content = review_provider.get_request_diff(request[0])
+            pager_command(["delta"], diff_content)  # Use pager_command directly
+
             request_approval = Prompt.ask(
                 f">>> Approve {request[0]} - {request[1]}?",
                 choices=["y", "n", "a"],
                 default="y",
             )
             if request_approval == "y":
-                print_panel(
-                    approve_request(args.osc_instance, request[0], args.bugowner)
-                )
+                with console.status(f"[bold green]Approving {request[0]}..."):
+                    approval_lines = review_provider.approve_request(
+                        request[0], args.bugowner
+                    )
+                print_panel(approval_lines)
         elif review_request == "a":
             sys.exit(0)
 
