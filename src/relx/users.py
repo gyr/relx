@@ -2,6 +2,7 @@ from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
 
+from relx.exceptions import RelxResourceNotFoundError
 from relx.utils.logger import logger_setup
 from relx.providers import get_user_provider
 
@@ -45,53 +46,43 @@ def main(args, config) -> None:
     :param config: Lua config table
     """
     console = Console()
-    try:
-        user_provider = get_user_provider(
-            provider_name="obs", api_url=args.osc_instance
-        )
-        table = Table(show_header=False)
+    user_provider = get_user_provider(provider_name="obs", api_url=args.osc_instance)
+    table = Table(show_header=False)
 
-        with console.status("[bold green]Running..."):
-            if args.group:
-                group_info = user_provider.get_group(
-                    group=args.search_text, is_fulllist=True
+    with console.status("[bold green]Running..."):
+        if args.group:
+            group_info = user_provider.get_group(
+                group=args.search_text, is_fulllist=True
+            )
+            if not group_info:
+                raise RelxResourceNotFoundError(
+                    f"Group '{args.search_text}' not found."
                 )
-                for key, value in group_info.items():
+            for key, value in group_info.items():
+                log.debug("%s: %s", key, value)
+                table.add_row(key, str(value))
+        else:
+            search_by = ""
+            if args.login:
+                search_by = "login"
+            elif args.email:
+                search_by = "email"
+            elif args.name:
+                search_by = "realname"
+
+            user_results = list(
+                user_provider.get_user(
+                    search_text=args.search_text, search_by=search_by
+                )
+            )
+
+            if not user_results:
+                raise RelxResourceNotFoundError(f"User '{args.search_text}' not found.")
+
+            for info in user_results:
+                for key, value in info.items():
                     log.debug("%s: %s", key, value)
                     table.add_row(key, str(value))
-            else:
-                search_by = ""
-                if args.login:
-                    search_by = "login"
-                elif args.email:
-                    search_by = "email"
-                elif args.name:
-                    search_by = "realname"
+                table.add_row(Rule(style="dim"), Rule(style="dim"))
 
-                user_results = list(
-                    user_provider.get_user(
-                        search_text=args.search_text, search_by=search_by
-                    )
-                )
-
-                if not user_results:
-                    console.print(
-                        f"[bold red]Error:[/bold red] User '{args.search_text}' not found."
-                    )
-                    exit(1)
-
-                for info in user_results:
-                    for key, value in info.items():
-                        log.debug("%s: %s", key, value)
-                        table.add_row(key, str(value))
-                    table.add_row(Rule(style="dim"), Rule(style="dim"))
-
-        console.print(table)
-    except RuntimeError as e:
-        log.error(e)
-        console.print(f"[bold red]Error:[/bold red] {e}")
-        exit(1)
-    except ValueError as e:
-        log.error(e)
-        console.print(f"[bold red]Error:[/bold red] {e}")
-        exit(1)
+    console.print(table)

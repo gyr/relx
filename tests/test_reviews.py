@@ -4,6 +4,7 @@ from argparse import Namespace
 
 from relx import reviews
 from relx.providers import base
+from relx.exceptions import RelxUserCancelError
 
 
 class TestReviewsCLI(unittest.TestCase):
@@ -38,11 +39,10 @@ class TestReviewsCLI(unittest.TestCase):
         mock_get_provider.return_value = self.mock_review_provider
         self.mock_review_provider.list_requests.return_value = []
 
-        # Act & Assert
-        with self.assertRaises(SystemExit) as cm:
-            reviews.main(self.mock_args, self.mock_config)
+        # Act
+        reviews.main(self.mock_args, self.mock_config)  # Should just return
 
-        self.assertEqual(cm.exception.code, 0)
+        # Assert
         self.mock_review_provider.list_requests.assert_called_once()
         mock_print_panel.assert_called_once_with(
             ["No pending reviews."], "Request Reviews"
@@ -64,10 +64,9 @@ class TestReviewsCLI(unittest.TestCase):
         mock_prompt.return_value = "n"  # User says 'n' to "Start the reviews?"
 
         # Act & Assert
-        with self.assertRaises(SystemExit) as cm:
+        with self.assertRaises(RelxUserCancelError):
             reviews.main(self.mock_args, self.mock_config)
 
-        self.assertEqual(cm.exception.code, 0)
         mock_print_panel.assert_called_once_with(["- SR#123: pkg1"], "Request Reviews")
         mock_prompt.assert_called_once_with(
             ">>> Start the reviews (1)?", choices=["y", "n"], default="y"
@@ -136,9 +135,8 @@ class TestReviewsCLI(unittest.TestCase):
         mock_prompt.side_effect = ["y", "a"]
 
         # Act & Assert
-        with self.assertRaises(SystemExit) as cm:
+        with self.assertRaises(RelxUserCancelError):
             reviews.main(self.mock_args, self.mock_config)
 
-        self.assertEqual(cm.exception.code, 0)
         mock_pager.assert_not_called()
         self.mock_review_provider.approve_request.assert_not_called()

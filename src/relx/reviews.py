@@ -1,10 +1,10 @@
 import argparse
-import sys
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
 from typing import Dict, Any
 
+from relx.exceptions import RelxUserCancelError
 from relx.providers import get_review_provider
 from relx.utils.logger import logger_setup
 from relx.utils.tools import pager_command
@@ -103,13 +103,13 @@ def main(args, config: Dict[str, Any]) -> None:
     print_panel(show_request_list(requests), "Request Reviews")
     total_requests = len(requests)
     if total_requests == 0:
-        sys.exit(0)
+        return
 
     start_review = Prompt.ask(
         f">>> Start the reviews ({total_requests})?", choices=["y", "n"], default="y"
     )
     if start_review == "n":
-        sys.exit(0)
+        raise RelxUserCancelError("User cancelled at start.")
 
     for index, request in enumerate(requests, start=1):
         review_request = Prompt.ask(
@@ -133,7 +133,9 @@ def main(args, config: Dict[str, Any]) -> None:
                         request[0], args.bugowner
                     )
                 print_panel(approval_lines)
+            elif request_approval == "a":
+                raise RelxUserCancelError("User aborted during approval.")
         elif review_request == "a":
-            sys.exit(0)
+            raise RelxUserCancelError("User aborted in main loop.")
 
     print_panel(["All reviews done."])

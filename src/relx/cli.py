@@ -11,6 +11,10 @@ from dotenv import load_dotenv
 from typing import Dict, Any
 
 from relx import __version__
+from relx.exceptions import (
+    RelxResourceNotFoundError,
+    RelxUserCancelError,
+)
 from relx.utils.logger import logger_setup, global_logger_config
 
 # --- Configuration ---
@@ -108,6 +112,14 @@ def main() -> None:
         # Run a subprogramm only if the parser detected it correctly.
         try:
             args.func(args, config)
+        except RelxUserCancelError as e:
+            log.info(f"User cancelled operation. {e}")
+            print("Operation cancelled by user.", file=sys.stderr)
+            sys.exit(0)
+        except (RelxResourceNotFoundError, RuntimeError) as e:
+            log.error(e)
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
         except urllib.error.URLError as url_error:
             if "name or service not known" in str(url_error).lower():
                 log.error(

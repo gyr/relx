@@ -2,11 +2,9 @@ import unittest
 from unittest.mock import MagicMock, patch, call
 from argparse import Namespace
 
-# We don't need to import Table anymore, as we will mock it.
-# from rich.table import Table
-
 from relx import users
 from relx.providers import base
+from relx.exceptions import RelxResourceNotFoundError
 
 
 class TestUsersCLI(unittest.TestCase):
@@ -32,11 +30,16 @@ class TestUsersCLI(unittest.TestCase):
             func=users.main,
         )
 
+    @patch("relx.users.Rule")
     @patch("relx.users.Table")
     @patch("relx.users.Console")
     @patch("relx.users.get_user_provider")
     def test_main_group_success(
-        self, mock_get_user_provider, mock_console_class, mock_table_class
+        self,
+        mock_get_user_provider,
+        mock_console_class,
+        mock_table_class,
+        mock_rule_class,
     ):
         """
         Test 'relx users --group <group-name>' command for successful group info.
@@ -74,29 +77,22 @@ class TestUsersCLI(unittest.TestCase):
 
         mock_console_instance.print.assert_called_once_with(mock_table_instance)
 
-    @patch("relx.users.Console")
     @patch("relx.users.get_user_provider")
-    def test_main_group_not_found(self, mock_get_user_provider, mock_console_class):
+    def test_main_group_not_found(self, mock_get_user_provider):
         """
         Test 'relx users --group <non-existent>' command for group not found.
         """
         # Arrange
         self.mock_args.group = True
         self.mock_args.search_text = "non-existent-group"
-        mock_console_instance = mock_console_class.return_value
-        self.mock_user_provider.get_group.side_effect = RuntimeError(
-            "non-existent-group not found."
-        )
+        self.mock_user_provider.get_group.return_value = {}  # Empty dict for not found
         mock_get_user_provider.return_value = self.mock_user_provider
 
         # Act & Assert
-        with self.assertRaises(SystemExit) as cm:
+        with self.assertRaisesRegex(
+            RelxResourceNotFoundError, "Group 'non-existent-group' not found."
+        ):
             users.main(self.mock_args, self.mock_config)
-
-        self.assertEqual(cm.exception.code, 1)
-        mock_console_instance.print.assert_called_once_with(
-            "[bold red]Error:[/bold red] non-existent-group not found."
-        )
 
     @patch("relx.users.Rule")
     @patch("relx.users.Table")
@@ -147,50 +143,37 @@ class TestUsersCLI(unittest.TestCase):
         mock_table_instance.add_row.assert_has_calls(expected_calls)
         mock_console_instance.print.assert_called_once_with(mock_table_instance)
 
-    @patch("relx.users.Console")
     @patch("relx.users.get_user_provider")
-    def test_main_user_not_found(self, mock_get_user_provider, mock_console_class):
+    def test_main_user_not_found(self, mock_get_user_provider):
         """
         Test 'relx users --login <non-existent>' command for user not found.
         """
         # Arrange
         self.mock_args.login = True
         self.mock_args.search_text = "nonexistent"
-        mock_console_instance = mock_console_class.return_value
         self.mock_user_provider.get_user.return_value = iter([])  # Empty generator
         mock_get_user_provider.return_value = self.mock_user_provider
 
         # Act & Assert
-        with self.assertRaises(SystemExit) as cm:
+        with self.assertRaisesRegex(
+            RelxResourceNotFoundError, "User 'nonexistent' not found."
+        ):
             users.main(self.mock_args, self.mock_config)
 
-        self.assertEqual(cm.exception.code, 1)
-        mock_console_instance.print.assert_called_once_with(
-            "[bold red]Error:[/bold red] User 'nonexistent' not found."
-        )
-
-    @patch("relx.users.Console")
     @patch("relx.users.get_user_provider")
-    def test_main_user_invalid_search_by(
-        self, mock_get_user_provider, mock_console_class
-    ):
+    def test_main_user_invalid_search_by(self, mock_get_user_provider):
         """
         Test main handling of ValueError from provider.
         """
         # Arrange
-        self.mock_args.login = True
+        self.mock_args.login = False
+        self.mock_args.name = True  # Using a different search to ensure the logic works
         self.mock_args.search_text = "anyuser"
-        mock_console_instance = mock_console_class.return_value
         self.mock_user_provider.get_user.side_effect = ValueError(
             "Invalid search_by parameter."
         )
         mock_get_user_provider.return_value = self.mock_user_provider
 
         # Act & Assert
-        with self.assertRaises(SystemExit) as cm:
+        with self.assertRaises(ValueError):
             users.main(self.mock_args, self.mock_config)
-
-        self.assertEqual(cm.exception.code, 1)
-        mock_console_instance.print.assert_called_once_with(
-            "[bold red]Error:[/bold red] Invalid search_by parameter."
-        )
