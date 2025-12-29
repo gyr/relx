@@ -59,9 +59,10 @@ class TestPackagesCLI(unittest.TestCase):
             ["testuser"],
             False,
         )  # (owners, is_group)
-        self.mock_user_provider.get_user.return_value = iter(
-            [{"User": "testuser", "Email": "test@suse.com"}]
-        )
+        self.mock_user_provider.get_entity_info.return_value = {
+            "User": "testuser",
+            "Email": "test@suse.com",
+        }
 
         # --- Act ---
         packages.main(self.mock_args, self.mock_config)
@@ -69,6 +70,9 @@ class TestPackagesCLI(unittest.TestCase):
         # --- Assert ---
         # Provider creation
         mock_get_package_provider.assert_called_once_with(
+            provider_name="obs", api_url=self.mock_args.osc_instance
+        )
+        mock_get_user_provider.assert_called_once_with(
             provider_name="obs", api_url=self.mock_args.osc_instance
         )
 
@@ -81,12 +85,9 @@ class TestPackagesCLI(unittest.TestCase):
             package="vim-source"
         )
 
-        # Check that get_bugowner_info was called correctly (via get_user_provider)
-        mock_get_user_provider.assert_called_once_with(
-            provider_name="obs", api_url=self.mock_args.osc_instance
-        )
-        self.mock_user_provider.get_user.assert_called_once_with(
-            search_text="testuser", search_by="login"
+        # Check that the new get_entity_info method was called correctly
+        self.mock_user_provider.get_entity_info.assert_called_once_with(
+            name="testuser", is_group=False
         )
 
         # Check Table and Console interactions
@@ -134,8 +135,10 @@ class TestPackagesCLI(unittest.TestCase):
             (["user1"], False),
             (["group1"], True),
         ]
-        self.mock_user_provider.get_user.return_value = iter([{"User": "user1"}])
-        self.mock_user_provider.get_group.return_value = {"Group": "group1"}
+        self.mock_user_provider.get_entity_info.side_effect = [
+            {"User": "user1"},
+            {"Group": "group1"},
+        ]
 
         # --- Act ---
         packages.main(self.mock_args, self.mock_config)
@@ -150,8 +153,7 @@ class TestPackagesCLI(unittest.TestCase):
         # Check interactions for successful packages (vim and nano)
         self.assertEqual(self.mock_package_provider.is_shipped.call_count, 2)
         self.assertEqual(self.mock_package_provider.get_bugowner.call_count, 2)
-        self.assertEqual(self.mock_user_provider.get_user.call_count, 1)
-        self.assertEqual(self.mock_user_provider.get_group.call_count, 1)
+        self.assertEqual(self.mock_user_provider.get_entity_info.call_count, 2)
 
         # Check that Table was created for each package (3 times)
         self.assertEqual(mock_table_class.call_count, 3)

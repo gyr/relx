@@ -234,6 +234,64 @@ class TestOBSUserProvider(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Invalid search_by parameter."):
             list(self.provider.get_user(search_text="any", search_by="invalid"))
 
+    # --- Test cases for get_entity_info ---
+    def test_get_entity_info_for_user_success(self):
+        """
+        Verifies get_entity_info calls get_user when is_group is False.
+        """
+        # Arrange
+        self.provider.get_user = MagicMock()
+        user_data = {"User": "testuser", "Email": "test@suse.com"}
+        self.provider.get_user.return_value = iter([user_data])
+
+        # Act
+        result = self.provider.get_entity_info(name="testuser", is_group=False)
+
+        # Assert
+        self.provider.get_user.assert_called_once_with(
+            search_text="testuser", search_by="login"
+        )
+        self.assertEqual(result, user_data)
+
+    def test_get_entity_info_for_group_success(self):
+        """
+        Verifies get_entity_info calls get_group when is_group is True.
+        """
+        # Arrange
+        self.provider.get_group = MagicMock()
+        group_data = {"Group": "testgroup", "Maintainers": ["user1"]}
+        self.provider.get_group.return_value = group_data
+
+        # Act
+        result = self.provider.get_entity_info(name="testgroup", is_group=True)
+
+        # Assert
+        self.provider.get_group.assert_called_once_with("testgroup", is_fulllist=False)
+        self.assertEqual(result, group_data)
+
+    def test_get_entity_info_user_not_found(self):
+        """
+        Verifies get_entity_info raises RuntimeError if user is not found.
+        """
+        # Arrange
+        self.provider.get_user = MagicMock()
+        self.provider.get_user.return_value = iter([])  # Empty iterator
+
+        # Act & Assert
+        with self.assertRaisesRegex(RuntimeError, "Entity 'notfound' not found."):
+            self.provider.get_entity_info(name="notfound", is_group=False)
+
+    def test_get_entity_info_group_not_found(self):
+        """
+        Verifies get_entity_info raises RuntimeError if group is not found.
+        """
+        # Arrange
+        self.provider.get_group = MagicMock(side_effect=RuntimeError("Original error"))
+
+        # Act & Assert
+        with self.assertRaisesRegex(RuntimeError, "Entity 'notfound' not found."):
+            self.provider.get_entity_info(name="notfound", is_group=True)
+
 
 if __name__ == "__main__":
     unittest.main()

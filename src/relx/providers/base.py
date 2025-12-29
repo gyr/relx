@@ -67,6 +67,16 @@ class UserProvider(Protocol):
         """
         ...
 
+    def get_entity_info(self, name: str, is_group: bool) -> dict:
+        """
+        Get information about an entity, which can be a user or a group.
+
+        :param name: The name of the user or group.
+        :param is_group: True if the entity is a group, False if it's a user.
+        :return: A dictionary containing the entity's information.
+        """
+        ...
+
 
 class PackageProvider(Protocol):
     """

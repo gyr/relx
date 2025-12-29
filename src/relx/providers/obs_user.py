@@ -107,3 +107,20 @@ class OBSUserProvider(UserProvider):
                 "State": state_tag.text if state_tag is not None else None,
             }
             yield info
+
+    def get_entity_info(self, name: str, is_group: bool) -> dict:
+        """
+        Get information about an entity, which can be a user or a group.
+
+        :param name: The name of the user or group.
+        :param is_group: True if the entity is a group, False if it's a user.
+        :return: A dictionary containing the entity's information.
+        """
+        try:
+            if is_group:
+                return self.get_group(name, is_fulllist=False)
+            else:
+                user_iterator = self.get_user(search_text=name, search_by="login")
+                return next(user_iterator)
+        except (RuntimeError, StopIteration) as e:
+            raise RuntimeError(f"Entity '{name}' not found.") from e

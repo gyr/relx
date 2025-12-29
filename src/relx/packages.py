@@ -4,32 +4,9 @@ from typing import Dict, Any
 
 from relx.providers import get_user_provider, get_package_provider
 from relx.utils.logger import logger_setup
-# Removed: re, lxml, etree, CalledProcessError, run_command, run_command_and_stream_output, running_spinner_decorator
 
 
 log = logger_setup(__name__)
-
-
-# REMOVED: is_shipped, get_source_package, get_bugowner functions
-
-
-def get_bugowner_info(api_url: str, user: str, is_group: bool) -> dict:
-    """
-    Given a bugowner, return their OBS info.
-    :param api_url: OBS instance
-    :param user: bugowner name (user or group)
-    :param is_group: True if the bugowner is a group
-    :return: OBS info dictionary
-    """
-    user_provider = get_user_provider(provider_name="obs", api_url=api_url)
-    try:
-        if is_group:
-            return user_provider.get_group(user, is_fulllist=False)
-        else:
-            user_iterator = user_provider.get_user(search_text=user, search_by="login")
-            return next(user_iterator)
-    except (RuntimeError, StopIteration) as e:
-        raise RuntimeError(f"Bugowner '{user}' not found.") from e
 
 
 def build_parser(parent_parser, config: Dict[str, Any]) -> None:
@@ -75,6 +52,7 @@ def main(args, config: Dict[str, Any]) -> None:
     package_provider = get_package_provider(
         provider_name="obs", api_url=args.osc_instance
     )
+    user_provider = get_user_provider(provider_name="obs", api_url=args.osc_instance)
 
     for binary in args.binary_name:
         try:
@@ -101,8 +79,8 @@ def main(args, config: Dict[str, Any]) -> None:
                 table.add_row("Shipped", "*** NO ***")
 
             for bugowner in bugowners:
-                for key, value in get_bugowner_info(
-                    args.osc_instance, bugowner, is_group
+                for key, value in user_provider.get_entity_info(
+                    name=bugowner, is_group=is_group
                 ).items():
                     log.debug("%s: %s", key, value)
                     table.add_row(key, str(value))
