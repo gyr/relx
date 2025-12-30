@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock, call
 
 from relx.providers.obs_review import OBSReviewProvider
+from relx.providers.params import ObsListRequestsParams, Request
 
 
 class TestOBSReviewProvider(unittest.TestCase):
@@ -55,7 +56,8 @@ class TestOBSReviewProvider(unittest.TestCase):
         self.mock_command_runner.return_value = mock_output
 
         # Act
-        requests = self.provider.list_requests(project="fake-project")
+        params = ObsListRequestsParams(project="fake-project")
+        requests = self.provider.list_requests(params)
 
         # Assert
         self.mock_command_runner.assert_called_once_with(
@@ -67,7 +69,9 @@ class TestOBSReviewProvider(unittest.TestCase):
                 "/search/request?match=state/@name='review' and review/@state='new' and target/@project='fake-project'&withhistory=0&withfullhistory=0",
             ]
         )
-        self.assertEqual(requests, [("123", "pkg1"), ("124", "pkg2")])
+        self.assertEqual(
+            requests, [Request(id="123", name="pkg1"), Request(id="124", name="pkg2")]
+        )
 
     def test_list_requests_staging_success(self):
         """
@@ -90,7 +94,8 @@ class TestOBSReviewProvider(unittest.TestCase):
         self.mock_command_runner.return_value = mock_output
 
         # Act
-        requests = self.provider.list_requests(project="fake-project", staging="A")
+        params = ObsListRequestsParams(project="fake-project", staging="A")
+        requests = self.provider.list_requests(params)
 
         # Assert
         self.mock_command_runner.assert_called_once_with(
@@ -102,7 +107,7 @@ class TestOBSReviewProvider(unittest.TestCase):
                 "/search/request?match=state/@name='review' and review/@state='new' and review/@by_project='fake-project:Staging:A'&withhistory=0&withfullhistory=0",
             ]
         )
-        self.assertEqual(requests, [("127", "pkg3")])
+        self.assertEqual(requests, [Request(id="127", name="pkg3")])
 
     def test_list_requests_bugowner_success(self):
         """
@@ -124,9 +129,8 @@ class TestOBSReviewProvider(unittest.TestCase):
         self.mock_command_runner.return_value = mock_output
 
         # Act
-        requests = self.provider.list_requests(
-            project="fake-project", is_bugowner_request=True
-        )
+        params = ObsListRequestsParams(project="fake-project", is_bugowner_request=True)
+        requests = self.provider.list_requests(params)
 
         # Assert
         self.mock_command_runner.assert_called_once_with(
@@ -138,7 +142,7 @@ class TestOBSReviewProvider(unittest.TestCase):
                 "/search/request?match=state/@name='review' and action/@type='set_bugowner' and action/target/@project='fake-project'&withhistory=0&withfullhistory=0",
             ]
         )
-        self.assertEqual(requests, [("128", "pkg4")])
+        self.assertEqual(requests, [Request(id="128", name="pkg4")])
 
     def test_list_requests_no_reviews(self):
         """
@@ -150,7 +154,8 @@ class TestOBSReviewProvider(unittest.TestCase):
         self.mock_command_runner.return_value = mock_output
 
         # Act
-        requests = self.provider.list_requests(project="fake-project")
+        params = ObsListRequestsParams(project="fake-project")
+        requests = self.provider.list_requests(params)
 
         # Assert
         self.mock_command_runner.assert_called_once()
@@ -165,7 +170,8 @@ class TestOBSReviewProvider(unittest.TestCase):
 
         # Act & Assert
         with self.assertRaisesRegex(RuntimeError, "Mocked command failed"):
-            self.provider.list_requests(project="fake-project")
+            params = ObsListRequestsParams(project="fake-project")
+            self.provider.list_requests(params)
 
     # --- Test cases for get_request_diff ---
     def test_get_request_diff_success(self):

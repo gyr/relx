@@ -4,6 +4,8 @@ This module defines the base protocol for all provider implementations.
 
 from typing import Dict, List, Generator, Protocol, Optional, Callable
 
+from relx.providers.params import ListRequestsParams, Request
+
 
 class ArtifactProvider(Protocol):
     """
@@ -118,18 +120,11 @@ class ReviewProvider(Protocol):
     A protocol that defines the interface for a code review provider.
     """
 
-    def list_requests(
-        self,
-        project: str,
-        staging: Optional[str] = None,
-        is_bugowner_request: bool = False,
-    ) -> list[tuple[str, str]]:
+    def list_requests(self, params: ListRequestsParams) -> list[Request]:
         """
         List all requests in a 'review' state.
 
-        :param project: The project to search in.
-        :param staging: The optional staging project letter.
-        :param is_bugowner_request: If True, searches for bugowner requests.
+        :param params: An object containing the parameters for the request list.
         :return: A list of (request_id, package_name) tuples.
         """
         ...

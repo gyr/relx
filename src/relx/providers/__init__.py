@@ -9,6 +9,7 @@ from .obs_artifact import OBSArtifactProvider
 from .obs_user import OBSUserProvider
 from .obs_package import OBSPackageProvider
 from .obs_review import OBSReviewProvider
+from .gitea_review import GiteaReviewProvider  # NEW IMPORT
 
 
 def get_artifact_provider(
@@ -82,6 +83,10 @@ def get_review_provider(provider_name: str, api_url: str) -> ReviewProvider:
     """
     if provider_name == "obs":
         return OBSReviewProvider(
+            api_url=api_url,
+        )
+    elif provider_name == "gitea":  # NEW CONDITION
+        return GiteaReviewProvider(
             api_url=api_url,
         )
     # Add other providers here in the future

@@ -6,6 +6,7 @@ from typing import Dict, Any
 
 from relx.exceptions import RelxUserCancelError
 from relx.providers import get_review_provider
+from relx.providers.params import ObsListRequestsParams, Request
 from relx.utils.logger import logger_setup
 from relx.utils.tools import pager_command
 # Removed: etree, run_command, running_spinner_decorator
@@ -41,12 +42,12 @@ def print_panel(lines: list[str], title: str = "") -> None:
 # REMOVED: list_requests, show_request, approve_request functions
 
 
-def show_request_list(requests: list[tuple[str, str]]) -> list[str]:
+def show_request_list(requests: list[Request]) -> list[str]:
     lines = []
     if len(requests) == 0:
         lines.append("No pending reviews.")
     else:
-        lines = [f"- SR#{id}: {package}" for id, package in requests]
+        lines = [f"- SR#{request.id}: {request.name}" for request in requests]
     return lines
 
 
@@ -93,11 +94,12 @@ def main(args, config: Dict[str, Any]) -> None:
 
     requests = []
     with console.status("[bold green]Fetching review requests..."):
-        requests = review_provider.list_requests(
+        params = ObsListRequestsParams(  # Use ObsListRequestsParams here
             project=args.project,
             staging=args.staging,
             is_bugowner_request=args.bugowner,
         )
+        requests = review_provider.list_requests(params)
 
     print_panel(show_request_list(requests), "Request Reviews")
     total_requests = len(requests)
@@ -112,24 +114,24 @@ def main(args, config: Dict[str, Any]) -> None:
 
     for index, request in enumerate(requests, start=1):
         review_request = Prompt.ask(
-            f">>> [{index}/{total_requests}] Review {request[0]} - {request[1]}?",
+            f">>> [{index}/{total_requests}] Review {request.id} - {request.name}?",
             choices=["y", "n", "a"],
             default="y",
         )
         if review_request == "y":
-            with console.status(f"[bold green]Fetching diff for {request[0]}..."):
-                diff_content = review_provider.get_request_diff(request[0])
+            with console.status(f"[bold green]Fetching diff for {request.id}..."):
+                diff_content = review_provider.get_request_diff(request.id)
             pager_command(["delta"], diff_content)  # Use pager_command directly
 
             request_approval = Prompt.ask(
-                f">>> Approve {request[0]} - {request[1]}?",
+                f">>> Approve {request.id} - {request.name}?",
                 choices=["y", "n", "a"],
                 default="y",
             )
             if request_approval == "y":
-                with console.status(f"[bold green]Approving {request[0]}..."):
+                with console.status(f"[bold green]Approving {request.id}..."):
                     approval_lines = review_provider.approve_request(
-                        request[0], args.bugowner
+                        request.id, args.bugowner
                     )
                 print_panel(approval_lines)
             elif request_approval == "a":

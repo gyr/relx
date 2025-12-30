@@ -4,6 +4,7 @@ from argparse import Namespace
 
 from relx import reviews
 from relx.providers import base
+from relx.providers.params import ObsListRequestsParams, Request
 from relx.exceptions import RelxUserCancelError
 
 
@@ -43,7 +44,13 @@ class TestReviewsCLI(unittest.TestCase):
         reviews.main(self.mock_args, self.mock_config)  # Should just return
 
         # Assert
-        self.mock_review_provider.list_requests.assert_called_once()
+        self.mock_review_provider.list_requests.assert_called_once_with(
+            ObsListRequestsParams(
+                project=self.mock_args.project,
+                staging=self.mock_args.staging,
+                is_bugowner_request=self.mock_args.bugowner,
+            )
+        )
         mock_print_panel.assert_called_once_with(
             ["No pending reviews."], "Request Reviews"
         )
@@ -60,13 +67,22 @@ class TestReviewsCLI(unittest.TestCase):
         """
         # Arrange
         mock_get_provider.return_value = self.mock_review_provider
-        self.mock_review_provider.list_requests.return_value = [("123", "pkg1")]
+        self.mock_review_provider.list_requests.return_value = [
+            Request(id="123", name="pkg1")
+        ]
         mock_prompt.return_value = "n"  # User says 'n' to "Start the reviews?"
 
         # Act & Assert
         with self.assertRaises(RelxUserCancelError):
             reviews.main(self.mock_args, self.mock_config)
 
+        self.mock_review_provider.list_requests.assert_called_once_with(
+            ObsListRequestsParams(
+                project=self.mock_args.project,
+                staging=self.mock_args.staging,
+                is_bugowner_request=self.mock_args.bugowner,
+            )
+        )
         mock_print_panel.assert_called_once_with(["- SR#123: pkg1"], "Request Reviews")
         mock_prompt.assert_called_once_with(
             ">>> Start the reviews (1)?", choices=["y", "n"], default="y"
@@ -90,7 +106,9 @@ class TestReviewsCLI(unittest.TestCase):
         """
         # Arrange
         mock_get_provider.return_value = self.mock_review_provider
-        self.mock_review_provider.list_requests.return_value = [("123", "pkg1")]
+        self.mock_review_provider.list_requests.return_value = [
+            Request(id="123", name="pkg1")
+        ]
         self.mock_review_provider.get_request_diff.return_value = "This is a diff"
         self.mock_review_provider.approve_request.return_value = ["Approved."]
 
@@ -101,6 +119,13 @@ class TestReviewsCLI(unittest.TestCase):
         reviews.main(self.mock_args, self.mock_config)
 
         # Assert
+        self.mock_review_provider.list_requests.assert_called_once_with(
+            ObsListRequestsParams(
+                project=self.mock_args.project,
+                staging=self.mock_args.staging,
+                is_bugowner_request=self.mock_args.bugowner,
+            )
+        )
         self.mock_review_provider.get_request_diff.assert_called_once_with("123")
         mock_pager.assert_called_once_with(["delta"], "This is a diff")
         self.mock_review_provider.approve_request.assert_called_once_with("123", False)
@@ -127,8 +152,8 @@ class TestReviewsCLI(unittest.TestCase):
         # Arrange
         mock_get_provider.return_value = self.mock_review_provider
         self.mock_review_provider.list_requests.return_value = [
-            ("123", "pkg1"),
-            ("124", "pkg2"),
+            Request(id="123", name="pkg1"),
+            Request(id="124", name="pkg2"),
         ]
 
         # Simulate user input: y (start), a (abort on first review)
@@ -138,5 +163,12 @@ class TestReviewsCLI(unittest.TestCase):
         with self.assertRaises(RelxUserCancelError):
             reviews.main(self.mock_args, self.mock_config)
 
+        self.mock_review_provider.list_requests.assert_called_once_with(
+            ObsListRequestsParams(
+                project=self.mock_args.project,
+                staging=self.mock_args.staging,
+                is_bugowner_request=self.mock_args.bugowner,
+            )
+        )
         mock_pager.assert_not_called()
         self.mock_review_provider.approve_request.assert_not_called()
