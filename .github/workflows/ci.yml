@@ -25,16 +25,13 @@ jobs:
       run: pip install uv
 
     - name: Install dependencies
-      run: uv sync
+      run: uv sync --all-extras
 
     - name: Lint with ruff
       run: uv run ruff check .
 
     - name: Check formatting with ruff
       run: uv run ruff format . --check
-
-    - name: Install mypy stubs
-      run: uv pip install types-PyYAML lxml-stubs
 
     - name: Type check with mypy
       # mypy might need to be added to pyproject.toml as a dev dependency for local use
@@ -58,11 +55,11 @@ jobs:
     - name: Install uv
       run: pip install uv
 
-    - name: Install build tool
-      run: uv pip install build
+    - name: Install dependencies
+      run: uv sync --all-extras
 
     - name: Build package
-      run: python -m build
+      run: uv run python -m build
 
     - name: Install package from wheel and test
       run: |

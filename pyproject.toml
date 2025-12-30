@@ -28,6 +28,15 @@ dependencies = [
     "PyYAML",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "mypy",
+    "build",
+    "types-PyYAML",
+    "lxml-stubs",
+]
+
 [project.urls]
 Homepage = "https://github.com/gyr/relx"
 Documentation = "https://relx.readthedocs.io/"
