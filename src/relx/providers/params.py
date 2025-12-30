@@ -33,3 +33,4 @@ class Request:
 
     id: str
     name: str
+    provider_type: str  # 'obs' or 'gitea'

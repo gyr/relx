@@ -70,7 +70,11 @@ class TestOBSReviewProvider(unittest.TestCase):
             ]
         )
         self.assertEqual(
-            requests, [Request(id="123", name="pkg1"), Request(id="124", name="pkg2")]
+            requests,
+            [
+                Request(id="123", name="pkg1", provider_type="obs"),
+                Request(id="124", name="pkg2", provider_type="obs"),
+            ],
         )
 
     def test_list_requests_staging_success(self):
@@ -107,7 +111,9 @@ class TestOBSReviewProvider(unittest.TestCase):
                 "/search/request?match=state/@name='review' and review/@state='new' and review/@by_project='fake-project:Staging:A'&withhistory=0&withfullhistory=0",
             ]
         )
-        self.assertEqual(requests, [Request(id="127", name="pkg3")])
+        self.assertEqual(
+            requests, [Request(id="127", name="pkg3", provider_type="obs")]
+        )
 
     def test_list_requests_bugowner_success(self):
         """
@@ -142,7 +148,9 @@ class TestOBSReviewProvider(unittest.TestCase):
                 "/search/request?match=state/@name='review' and action/@type='set_bugowner' and action/target/@project='fake-project'&withhistory=0&withfullhistory=0",
             ]
         )
-        self.assertEqual(requests, [Request(id="128", name="pkg4")])
+        self.assertEqual(
+            requests, [Request(id="128", name="pkg4", provider_type="obs")]
+        )
 
     def test_list_requests_no_reviews(self):
         """

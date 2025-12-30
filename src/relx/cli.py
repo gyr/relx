@@ -137,8 +137,6 @@ def main() -> None:
         args.debug = config["debug"]
 
     # Set defaults for subcommand-specific arguments
-    if "project" in args and args.project is None:
-        args.project = config.get("default_project")
     if "product" in args and args.product is None:
         args.product = config.get("default_product")
 

@@ -6,7 +6,12 @@ from typing import Dict, Any
 
 from relx.exceptions import RelxUserCancelError
 from relx.providers import get_review_provider
-from relx.providers.params import ObsListRequestsParams, Request
+from relx.providers.params import (
+    ListRequestsParams,
+    ObsListRequestsParams,
+    GiteaListRequestsParams,
+    Request,
+)
 from relx.utils.logger import logger_setup
 from relx.utils.tools import pager_command
 # Removed: etree, run_command, running_spinner_decorator
@@ -47,7 +52,9 @@ def show_request_list(requests: list[Request]) -> list[str]:
     if len(requests) == 0:
         lines.append("No pending reviews.")
     else:
-        lines = [f"- SR#{request.id}: {request.name}" for request in requests]
+        for request in requests:
+            prefix = "PR#" if request.provider_type == "gitea" else "SR#"
+            lines.append(f"- {prefix}{request.id}: {request.name}")
     return lines
 
 
@@ -62,21 +69,36 @@ def build_parser(parent_parser, config: Dict[str, Any] | None) -> None:
     subparser = parent_parser.add_parser(
         "reviews", help="Review submit, delete and bugowner requests."
     )
-    subparser.add_argument(
+
+    # OBS Arguments
+    obs_group = subparser.add_argument_group("OBS Provider Arguments")
+    obs_group.add_argument(
         "--project",
         "-p",
         dest="project",
-        help="OBS/IBS project. Default is taken from config file.",
+        help="OBS/IBS project. Required for OBS provider.",
         type=str,
     )
-    # Mutually exclusive group within the subparser
-    group = subparser.add_mutually_exclusive_group()
-    group.add_argument(
+    obs_exclusive_group = obs_group.add_mutually_exclusive_group()
+    obs_exclusive_group.add_argument(
         "--staging", "-s", dest="staging", type=valid_staging, help="Staging letter."
     )
-    group.add_argument(
-        "--bugowner", "-b", action="store_true", help="Review bugowner requests."
+    obs_exclusive_group.add_argument(
+        "--bugowner",
+        "-b",
+        dest="bugowner",
+        action="store_true",
+        help="Review bugowner requests.",
     )
+
+    # Gitea Arguments
+    gitea_group = subparser.add_argument_group("Gitea Provider Arguments")
+    gitea_group.add_argument(
+        "--repository", dest="repository", help="Gitea repository."
+    )
+    gitea_group.add_argument("--branch", dest="branch", help="Gitea target branch.")
+    gitea_group.add_argument("--reviewer", dest="reviewer", help="Gitea reviewer.")
+
     subparser.set_defaults(func=main)
 
 
@@ -88,20 +110,56 @@ def main(args, config: Dict[str, Any]) -> None:
     :param config: Lua config table
     """
     console = Console()
-    review_provider = get_review_provider(
-        provider_name="obs", api_url=args.osc_instance
-    )
 
-    requests = []
-    with console.status("[bold green]Fetching review requests..."):
-        params = ObsListRequestsParams(  # Use ObsListRequestsParams here
+    is_obs = args.project is not None
+    is_gitea = all([args.repository, args.branch, args.reviewer])
+
+    # Enforce mutual exclusivity
+    if is_obs and is_gitea:
+        console.print(
+            "[bold red]Error: Please provide arguments for either OBS (--project) or Gitea, not both.[/bold red]"
+        )
+        return
+
+    # Enforce dependency of staging/bugowner on project
+    if (args.staging is not None or args.bugowner) and not is_obs:
+        console.print(
+            "[bold red]Error: --project is required when using --staging or --bugowner.[/bold red]"
+        )
+        return
+
+    params: ListRequestsParams
+    if is_gitea:
+        provider_name = "gitea"
+        params = GiteaListRequestsParams(
+            repository=args.repository,
+            branch=args.branch,
+            reviewer=args.reviewer,
+        )
+    elif is_obs:
+        provider_name = "obs"
+        params = ObsListRequestsParams(
             project=args.project,
             staging=args.staging,
             is_bugowner_request=args.bugowner,
         )
+    else:
+        console.print(
+            "[bold red]Error: Please provide arguments for a provider. For OBS: --project. For Gitea: --repository, --branch, AND --reviewer.[/bold red]"
+        )
+        return
+
+    review_provider = get_review_provider(
+        provider_name=provider_name, api_url=args.osc_instance
+    )
+
+    requests = []
+    with console.status("[bold green]Fetching review requests..."):
         requests = review_provider.list_requests(params)
 
-    print_panel(show_request_list(requests), "Request Reviews")
+    print_panel(
+        show_request_list(requests), f"Request Reviews for {provider_name.upper()}"
+    )
     total_requests = len(requests)
     if total_requests == 0:
         return

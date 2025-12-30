@@ -64,15 +64,15 @@ class GiteaReviewProvider(ReviewProvider):
         ]
 
         result = self._run_command(command_args)
-        if not result:
+        if not result or not result.stdout:
             log.info("No requests found or command returned empty output.")
             return []
 
         try:
             # The JSON structure is a list containing a dict, which itself contains a 'requests' list.
-            data = json.loads(result)
+            data = json.loads(result.stdout)
         except json.JSONDecodeError:
-            log.error(f"Failed to parse JSON from command output: {result}")
+            log.error(f"Failed to parse JSON from command output: {result.stdout}")
             return []
 
         requests = []
@@ -81,7 +81,11 @@ class GiteaReviewProvider(ReviewProvider):
                 # Ensure 'number' and 'title' exist before accessing
                 if "number" in req_data and "title" in req_data:
                     requests.append(
-                        Request(id=str(req_data["number"]), name=req_data["title"])
+                        Request(
+                            id=str(req_data["number"]),
+                            name=req_data["title"],
+                            provider_type="gitea",
+                        )
                     )
                 else:
                     log.warning(f"Skipping malformed request data: {req_data}")

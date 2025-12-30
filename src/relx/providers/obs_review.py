@@ -79,7 +79,9 @@ class OBSReviewProvider(ReviewProvider):
                         package_name = target_action.get("package")
 
                     if request_id is not None and package_name is not None:
-                        request_obj = Request(id=request_id, name=package_name)
+                        request_obj = Request(
+                            id=request_id, name=package_name, provider_type="obs"
+                        )
                         log.debug(f"{request_obj=}")
                         requests.append(request_obj)
         return requests
