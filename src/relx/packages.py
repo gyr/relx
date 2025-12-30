@@ -9,7 +9,7 @@ from relx.utils.logger import logger_setup
 log = logger_setup(__name__)
 
 
-def build_parser(parent_parser, config: Dict[str, Any]) -> None:
+def build_parser(parent_parser, config: Dict[str, Any] | None) -> None:
     """
     Builds the parser for this script. This is executed by the main CLI
     dynamically.
@@ -25,17 +25,15 @@ def build_parser(parent_parser, config: Dict[str, Any]) -> None:
         "--project",
         "-p",
         dest="project",
-        help=f"OBS/IBS project (DEFAULT = {config['default_project']}).",
+        help="OBS/IBS project. Default is taken from config file.",
         type=str,
-        default=config["default_project"],
     )
     subparser.add_argument(
         "--product",
         "-P",
         dest="product",
-        help=f"OBS/IBS product (DEFAULT = {config['default_product']}).",
+        help="OBS/IBS product. Default is taken from config file.",
         type=str,
-        default=config["default_product"],
     )
     subparser.add_argument("binary_name", nargs="+", type=str, help="Binary name.")
     subparser.set_defaults(func=main)

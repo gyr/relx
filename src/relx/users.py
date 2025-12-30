@@ -1,6 +1,7 @@
 from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
+from typing import Dict, Any
 
 from relx.exceptions import RelxResourceNotFoundError
 from relx.utils.logger import logger_setup
@@ -10,7 +11,7 @@ from relx.providers import get_user_provider
 log = logger_setup(__name__)
 
 
-def build_parser(parent_parser, config) -> None:
+def build_parser(parent_parser, config: Dict[str, Any] | None) -> None:
     """
     Builds the parser for this script. This is executed by the main CLI
     dynamically.

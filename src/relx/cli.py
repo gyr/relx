@@ -4,46 +4,97 @@ import importlib
 import os
 import sys
 import urllib.error
-import yaml
+from typing import Any, Dict
 
 import argcomplete
+import yaml
 from dotenv import load_dotenv
-from typing import Dict, Any
 
 from relx import __version__
-from relx.exceptions import (
-    RelxResourceNotFoundError,
-    RelxUserCancelError,
-)
-from relx.utils.logger import logger_setup, global_logger_config
+from relx.exceptions import RelxResourceNotFoundError, RelxUserCancelError
+from relx.utils.logger import global_logger_config, logger_setup
 
-# --- Configuration ---
-# Explicitly load .env from the project root for developer convenience.
-# This is safer than a broad search and does nothing if the .env file doesn't exist.
-project_root = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-dotenv_path = os.path.join(project_root, ".env")
-load_dotenv(dotenv_path=dotenv_path)
+log = logger_setup(__name__)
 
-relx_conf_dir = os.environ.get("RELX_CONF_DIR")
 
-if relx_conf_dir:
-    # Expand user (~) if present in the env var path
-    config_dir = os.path.expanduser(relx_conf_dir)
-else:
-    # Default to XDG_CONFIG_HOME/relx or ~/.config/relx
-    xdg_config_home = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
-    config_dir = os.path.join(xdg_config_home, "relx")
+def create_parser() -> argparse.ArgumentParser:
+    """Creates the top-level argument parser."""
+    parser = argparse.ArgumentParser(
+        prog="relx", description="Release management tools."
+    )
+    parser.add_argument(
+        "--osc-config",
+        dest="osc_config",
+        help="The location of the oscrc if a specific one should be used.",
+    )
+    parser.add_argument(
+        "--osc-instance",
+        dest="osc_instance",
+        help="The URL of the API from the Open Buildservice instance.",
+    )
+    parser.add_argument(
+        "--debug",
+        "-d",
+        action="store_true",
+        help="Enable debug logging.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
+    return parser
 
-config_file_path = os.path.join(config_dir, "config.yaml")
+
+def load_all_modules(parser: argparse.ArgumentParser) -> None:
+    """Dynamically discovers and loads all subcommand modules."""
+    subparsers = parser.add_subparsers(
+        title="positional arguments",
+        help="Help for the subprograms that this tool offers.",
+    )
+    package_path = os.path.dirname(os.path.abspath(__file__))
+    module_names = []
+
+    for name in os.listdir(package_path):
+        if name.endswith(".py") and not name.startswith("__"):
+            module_name = name[:-3]
+            if module_name not in ["cli", "exceptions", "requests"]:
+                module_names.append(module_name)
+
+    module_names.sort()
+
+    for module_name in module_names:
+        module = importlib.import_module(f".{module_name}", package="relx")
+        # Pass None for config, as it's not needed to build the parsers.
+        module.build_parser(subparsers, None)
+
+
+def get_config_path() -> str:
+    """Determines the path to the configuration file."""
+    project_root = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
+    dotenv_path = os.path.join(project_root, ".env")
+    load_dotenv(dotenv_path=dotenv_path)
+
+    relx_conf_dir = os.environ.get("RELX_CONF_DIR")
+    if relx_conf_dir:
+        config_dir = os.path.expanduser(relx_conf_dir)
+    else:
+        xdg_config_home = os.environ.get(
+            "XDG_CONFIG_HOME", os.path.expanduser("~/.config")
+        )
+        config_dir = os.path.join(xdg_config_home, "relx")
+
+    return os.path.join(config_dir, "config.yaml")
 
 
 def load_config(config_file_path: str) -> Dict[str, Any]:
+    """Loads the YAML configuration file or exits if not found."""
     try:
         with open(config_file_path, "r") as f:
             config = yaml.safe_load(f)
-        return config
+            return config or {}
     except FileNotFoundError:
         print(
             f"Error: Configuration file '{config_file_path}' not found.",
@@ -57,98 +108,68 @@ def load_config(config_file_path: str) -> Dict[str, Any]:
         sys.exit(1)
 
 
-config = load_config(config_file_path)
-
-PARSER = argparse.ArgumentParser(description="Release management tools.")
-PARSER.add_argument(
-    "--osc-config",
-    dest="osc_config",
-    help="The location of the oscrc if a specific one should be used.",
-)
-PARSER.add_argument(
-    "--osc-instance",
-    dest="osc_instance",
-    help=f"The URL of the API from the Open Buildservice instance that should be used (DEFAULT = {config['api_url']}).",
-    default=config["api_url"],
-)
-PARSER.add_argument(
-    "--debug",
-    "-d",
-    action="store_true",
-    help="Enable debug logging.",
-)
-PARSER.add_argument(
-    "--version",
-    action="version",
-    version=f"%(prog)s {__version__}",
-)
-SUBPARSERS = PARSER.add_subparsers(
-    help="Help for the subprograms that this tool offers."
-)
-
-
-log = logger_setup(__name__)
-
-
-def import_sle_module(name: str) -> None:
-    """
-    Imports a module
-
-    :param name: Module in the relx package.
-    """
-    module = importlib.import_module(f".{name}", package="relx")
-    module.build_parser(SUBPARSERS, config)
-
-
 def main() -> None:
-    # --- Dynamic Module Discovery ---
-    module_list = []
-    # Get the directory of the 'relx' package
-    package_path = os.path.dirname(os.path.abspath(__file__))
+    """The main entry point for the relx CLI."""
+    parser = create_parser()
+    # Load all subcommands so they are available for help messages.
+    load_all_modules(parser)
+    argcomplete.autocomplete(parser)
 
-    for name in os.listdir(package_path):
-        # Check if it's a python file and not a special/internal module
-        if name.endswith(".py") and not name.startswith("__"):
-            module_name = name[:-3]  # Remove .py extension
+    # This parse will handle --version and --help (and exit), and also
+    # identify which subcommand (if any) was used.
+    args = parser.parse_args()
 
-            # Exclude specific modules and directories that are not subcommands
-            if module_name in ["cli", "exceptions", "requests"]:
-                continue
+    # If no subcommand was provided, argparse will not set the 'func' attribute.
+    # In this case, print help and exit. Argparse handles the -h/--help case itself.
+    if "func" not in vars(args):
+        parser.print_help()
+        sys.exit(1)
 
-            module_list.append(module_name)
+    # --- A subcommand was specified, so now we need the config ---
+    config_path = get_config_path()
+    config = load_config(config_path)
 
-    module_list.sort()  # Sort for deterministic order
-    # --- End Discovery ---
+    # Apply defaults from config if they weren't provided on the command line.
+    # The command-line argument (if given) always takes precedence.
+    if args.osc_instance is None and "api_url" in config:
+        args.osc_instance = config["api_url"]
+    if args.debug is False and "debug" in config:
+        args.debug = config["debug"]
 
-    for module in module_list:
-        import_sle_module(module)
-    argcomplete.autocomplete(PARSER)
-    args = PARSER.parse_args()
-    global_logger_config(verbose=args.debug or config["debug"])
-    log.debug(f"{config_dir=}")
-    if "func" in vars(args):
-        # Run a subprogramm only if the parser detected it correctly.
-        try:
-            args.func(args, config)
-        except RelxUserCancelError as e:
-            log.info(f"User cancelled operation. {e}")
-            print("Operation cancelled by user.", file=sys.stderr)
-            sys.exit(0)
-        except (RelxResourceNotFoundError, RuntimeError) as e:
-            log.error(e)
-            print(f"Error: {e}", file=sys.stderr)
+    # Set defaults for subcommand-specific arguments
+    if "project" in args and args.project is None:
+        args.project = config.get("default_project")
+    if "product" in args and args.product is None:
+        args.product = config.get("default_product")
+
+    # Update the config with the final values from args to pass to functions.
+    config["api_url"] = args.osc_instance
+    config["debug"] = args.debug
+
+    global_logger_config(verbose=args.debug)
+    log.debug(f"Using config file: {config_path}")
+
+    # --- Execute subcommand ---
+    try:
+        args.func(args, config)
+    except RelxUserCancelError as e:
+        log.info(f"User cancelled operation. {e}")
+        print("Operation cancelled by user.", file=sys.stderr)
+        sys.exit(0)
+    except (RelxResourceNotFoundError, RuntimeError) as e:
+        log.error(e)
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except urllib.error.URLError as url_error:
+        if "name or service not known" in str(url_error).lower():
+            log.error(
+                "No connection to one of the tools. Please make sure the "
+                "connection to the tools is available before executing "
+                "the program!"
+            )
             sys.exit(1)
-        except urllib.error.URLError as url_error:
-            if "name or service not known" in str(url_error).lower():
-                log.error(
-                    "No connection to one of the tools. Please make sure the "
-                    "connection to the tools is available before executing "
-                    "the program!"
-                )
-                sys.exit(1)
-        return
-    PARSER.print_help()
-    sys.exit(1)
+        # Re-raise other URL errors
+        raise
 
 
 if __name__ == "__main__":

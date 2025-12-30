@@ -11,7 +11,7 @@ from relx.providers import get_artifact_provider
 log = logger_setup(__name__)
 
 
-def build_parser(parent_parser, config: Dict[str, Any]) -> None:
+def build_parser(parent_parser, config: Dict[str, Any] | None) -> None:
     """
     Builds the parser for this script. This is executed by the main CLI
     dynamically.
@@ -26,9 +26,8 @@ def build_parser(parent_parser, config: Dict[str, Any]) -> None:
         "--project",
         "-p",
         dest="project",
-        help=f"OBS/IBS project (DEFAULT = {config['default_product']}).",
+        help="OBS/IBS project. Default is taken from config file.",
         type=str,
-        default=config["default_product"],
     )
     subparser.set_defaults(func=main)
 

@@ -74,6 +74,36 @@ class TestCLI(unittest.TestCase):
                 "Stderr should contain the 'not found' message.",
             )
 
+    def test_help_message_shows_subcommands(self):
+        """
+        Test that 'relx --help' shows the list of available subcommands.
+        This should work even without a config file.
+        """
+        # Arrange
+        with tempfile.TemporaryDirectory() as temp_home:
+            env = os.environ.copy()
+            env["HOME"] = temp_home
+            env["XDG_CONFIG_HOME"] = os.path.join(temp_home, ".config")
+
+            command = [sys.executable, "-m", "relx", "--help"]
+
+            # Act
+            result = subprocess.run(
+                command, capture_output=True, text=True, env=env, check=False
+            )
+
+            # Assert
+            self.assertEqual(
+                result.returncode, 0, "Help command should exit successfully."
+            )
+            self.assertIn("usage: relx [-h]", result.stdout)
+            # Check that the subcommands are listed in the help output
+            self.assertIn("{artifacts,packages,reviews,users}", result.stdout)
+            self.assertIn("artifacts", result.stdout)
+            self.assertIn("packages", result.stdout)
+            self.assertIn("reviews", result.stdout)
+            self.assertIn("users", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

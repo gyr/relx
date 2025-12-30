@@ -50,7 +50,7 @@ def show_request_list(requests: list[tuple[str, str]]) -> list[str]:
     return lines
 
 
-def build_parser(parent_parser, config: Dict[str, Any]) -> None:
+def build_parser(parent_parser, config: Dict[str, Any] | None) -> None:
     """
     Builds the parser for this script. This is executed by the main CLI
     dynamically.
@@ -65,9 +65,8 @@ def build_parser(parent_parser, config: Dict[str, Any]) -> None:
         "--project",
         "-p",
         dest="project",
-        help=f"OBS/IBS project (DEFAULT = {config['default_project']}).",
+        help="OBS/IBS project. Default is taken from config file.",
         type=str,
-        default=config["default_project"],
     )
     # Mutually exclusive group within the subparser
     group = subparser.add_mutually_exclusive_group()
