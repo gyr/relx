@@ -98,6 +98,12 @@ def build_parser(parent_parser, config: Dict[str, Any] | None) -> None:
     )
     gitea_group.add_argument("--branch", dest="branch", help="Gitea target branch.")
     gitea_group.add_argument("--reviewer", dest="reviewer", help="Gitea reviewer.")
+    gitea_group.add_argument(
+        "--prs",
+        dest="prs",
+        help="Comma-separated list of PR IDs to filter by.",
+        type=str,
+    )
 
     subparser.set_defaults(func=main)
 
@@ -128,6 +134,24 @@ def main(args, config: Dict[str, Any]) -> None:
         )
         return
 
+    # Enforce dependency of prs on gitea
+    if args.prs and not is_gitea:
+        console.print(
+            "[bold red]Error: --prs can only be used with Gitea arguments (--repository, --branch, --reviewer).[/bold red]"
+        )
+        return
+
+    # Validate --prs value early if it's provided with Gitea args
+    if is_gitea and args.prs:
+        try:
+            # We parse it here just for validation. The actual filtering happens later.
+            _ = {int(pr_id.strip()) for pr_id in args.prs.split(",")}
+        except ValueError:
+            console.print(
+                "[bold red]Error: --prs must be a comma-separated list of numbers.[/bold red]"
+            )
+            return
+
     params: ListRequestsParams
     if is_gitea:
         provider_name = "gitea"
@@ -155,7 +179,26 @@ def main(args, config: Dict[str, Any]) -> None:
 
     requests = []
     with console.status("[bold green]Fetching review requests..."):
-        requests = review_provider.list_requests(params)
+        all_requests = review_provider.list_requests(params)
+
+    if args.prs and is_gitea:
+        try:
+            requested_pr_ids = {int(pr_id.strip()) for pr_id in args.prs.split(",")}
+        except ValueError:
+            console.print(
+                "[bold red]Error: --prs must be a comma-separated list of numbers.[/bold red]"
+            )
+            return
+
+        requests = [req for req in all_requests if int(req.id) in requested_pr_ids]
+        found_pr_ids = {int(req.id) for req in requests}
+        not_found_ids = requested_pr_ids - found_pr_ids
+        if not_found_ids:
+            console.print(
+                f"[bold yellow]Warning: The following PRs were not found: {', '.join(map(str, not_found_ids))}[/bold yellow]"
+            )
+    else:
+        requests = all_requests
 
     print_panel(
         show_request_list(requests), f"Request Reviews for {provider_name.upper()}"
