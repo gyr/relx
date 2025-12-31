@@ -1,5 +1,6 @@
 from lxml import etree
 from typing import List, Any, Callable
+from argparse import Namespace
 
 from .base import ReviewProvider
 from relx.providers.params import (
@@ -32,6 +33,26 @@ class OBSReviewProvider(ReviewProvider):
     ):
         self.api_url = api_url
         self._run_command = command_runner
+
+    @classmethod
+    def build_list_params(cls, args: Namespace) -> ListRequestsParams:
+        return ObsListRequestsParams(
+            project=args.project,
+            staging=args.staging,
+            is_bugowner_request=args.bugowner,
+        )
+
+    @classmethod
+    def build_get_request_diff_params(
+        cls, request_id: str, args: Namespace
+    ) -> GetRequestDiffParams:
+        return ObsGetRequestDiffParams(request_id=request_id)
+
+    @classmethod
+    def build_approve_request_params(
+        cls, request_id: str, args: Namespace
+    ) -> ApproveRequestParams:
+        return ObsApproveRequestParams(request_id=request_id, is_bugowner=args.bugowner)
 
     def list_requests(self, params: ListRequestsParams) -> list[Request]:
         """

@@ -6,18 +6,7 @@ from typing import Dict, Any
 
 from relx.exceptions import RelxUserCancelError
 from relx.providers import get_review_provider
-from relx.providers.params import (
-    ListRequestsParams,
-    ObsListRequestsParams,
-    GiteaListRequestsParams,
-    Request,
-    GetRequestDiffParams,
-    ObsGetRequestDiffParams,
-    GiteaGetRequestDiffParams,
-    ApproveRequestParams,
-    ObsApproveRequestParams,
-    GiteaApproveRequestParams,
-)
+from relx.providers.params import Request
 from relx.utils.logger import logger_setup
 from relx.utils.tools import pager_command
 # Removed: etree, run_command, running_spinner_decorator
@@ -158,22 +147,8 @@ def main(args, config: Dict[str, Any]) -> None:
             )
             return
 
-    params: ListRequestsParams
-    if is_gitea:
-        provider_name = "gitea"
-        params = GiteaListRequestsParams(
-            repository=args.repository,
-            branch=args.branch,
-            reviewer=args.reviewer,
-        )
-    elif is_obs:
-        provider_name = "obs"
-        params = ObsListRequestsParams(
-            project=args.project,
-            staging=args.staging,
-            is_bugowner_request=args.bugowner,
-        )
-    else:
+    provider_name = "gitea" if is_gitea else "obs"
+    if not is_gitea and not is_obs:
         console.print(
             "[bold red]Error: Please provide arguments for a provider. For OBS: --project. For Gitea: --repository, --branch, AND --reviewer.[/bold red]"
         )
@@ -182,10 +157,13 @@ def main(args, config: Dict[str, Any]) -> None:
     review_provider = get_review_provider(
         provider_name=provider_name, api_url=args.osc_instance
     )
+    # Get the provider class to access static methods
+    ProviderClass = type(review_provider)
 
     requests = []
     with console.status("[bold green]Fetching review requests..."):
-        all_requests = review_provider.list_requests(params)
+        list_params = ProviderClass.build_list_params(args)
+        all_requests = review_provider.list_requests(list_params)
 
     if args.prs and is_gitea:
         try:
@@ -227,13 +205,9 @@ def main(args, config: Dict[str, Any]) -> None:
         )
         if review_request == "y":
             with console.status(f"[bold green]Fetching diff for {request.id}..."):
-                diff_params: GetRequestDiffParams
-                if is_gitea:
-                    diff_params = GiteaGetRequestDiffParams(
-                        request_id=request.id, repository=args.repository
-                    )
-                else:  # is_obs
-                    diff_params = ObsGetRequestDiffParams(request_id=request.id)
+                diff_params = ProviderClass.build_get_request_diff_params(
+                    request.id, args
+                )
                 diff_content = review_provider.get_request_diff(diff_params)
             pager_command(["delta"], diff_content)  # Use pager_command directly
 
@@ -244,17 +218,9 @@ def main(args, config: Dict[str, Any]) -> None:
             )
             if request_approval == "y":
                 with console.status(f"[bold green]Approving {request.id}..."):
-                    approve_params: ApproveRequestParams
-                    if is_gitea:
-                        approve_params = GiteaApproveRequestParams(
-                            request_id=request.id,
-                            repository=args.repository,
-                            reviewer=args.reviewer,
-                        )
-                    else:  # is_obs
-                        approve_params = ObsApproveRequestParams(
-                            request_id=request.id, is_bugowner=args.bugowner
-                        )
+                    approve_params = ProviderClass.build_approve_request_params(
+                        request.id, args
+                    )
                     approval_lines = review_provider.approve_request(approve_params)
                 print_panel(approval_lines)
             elif request_approval == "a":

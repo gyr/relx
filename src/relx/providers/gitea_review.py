@@ -1,4 +1,5 @@
 from typing import List, Any, Callable
+from argparse import Namespace
 
 from .base import ReviewProvider
 import json
@@ -33,6 +34,32 @@ class GiteaReviewProvider(ReviewProvider):
     ):
         self.api_url = api_url
         self._run_command = command_runner
+
+    @classmethod
+    def build_list_params(cls, args: Namespace) -> ListRequestsParams:
+        return GiteaListRequestsParams(
+            repository=args.repository,
+            branch=args.branch,
+            reviewer=args.reviewer,
+        )
+
+    @classmethod
+    def build_get_request_diff_params(
+        cls, request_id: str, args: Namespace
+    ) -> GetRequestDiffParams:
+        return GiteaGetRequestDiffParams(
+            request_id=request_id, repository=args.repository
+        )
+
+    @classmethod
+    def build_approve_request_params(
+        cls, request_id: str, args: Namespace
+    ) -> ApproveRequestParams:
+        return GiteaApproveRequestParams(
+            request_id=request_id,
+            repository=args.repository,
+            reviewer=args.reviewer,
+        )
 
     def list_requests(self, params: ListRequestsParams) -> list[Request]:
         """

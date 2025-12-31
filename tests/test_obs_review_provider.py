@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, call
+from argparse import Namespace
 
 from relx.providers.obs_review import OBSReviewProvider
 from relx.providers.params import (
@@ -323,3 +324,47 @@ class TestOBSReviewProvider(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestOBSReviewProviderStaticMethods(unittest.TestCase):
+    """
+    Unit tests for the OBSReviewProvider static methods.
+    """
+
+    def setUp(self):
+        self.mock_args = Namespace(
+            project="fake-project",
+            staging="A",
+            bugowner=True,
+            # Gitea args are not used by this provider
+            repository=None,
+            branch=None,
+            reviewer=None,
+        )
+
+    def test_build_list_params(self):
+        """
+        Verifies build_list_params correctly creates ObsListRequestsParams.
+        """
+        params = OBSReviewProvider.build_list_params(self.mock_args)
+        self.assertIsInstance(params, ObsListRequestsParams)
+        self.assertEqual(params.project, "fake-project")
+        self.assertEqual(params.staging, "A")
+        self.assertEqual(params.is_bugowner_request, True)
+
+    def test_build_get_request_diff_params(self):
+        """
+        Verifies build_get_request_diff_params correctly creates ObsGetRequestDiffParams.
+        """
+        params = OBSReviewProvider.build_get_request_diff_params("123", self.mock_args)
+        self.assertIsInstance(params, ObsGetRequestDiffParams)
+        self.assertEqual(params.request_id, "123")
+
+    def test_build_approve_request_params(self):
+        """
+        Verifies build_approve_request_params correctly creates ObsApproveRequestParams.
+        """
+        params = OBSReviewProvider.build_approve_request_params("123", self.mock_args)
+        self.assertIsInstance(params, ObsApproveRequestParams)
+        self.assertEqual(params.request_id, "123")
+        self.assertEqual(params.is_bugowner, True)

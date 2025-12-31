@@ -1,6 +1,7 @@
 import unittest
 import json
 from unittest.mock import MagicMock
+from argparse import Namespace
 
 from relx.providers.gitea_review import GiteaReviewProvider
 from relx.providers.params import (
@@ -218,3 +219,51 @@ class TestGiteaReviewProvider(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestGiteaReviewProviderStaticMethods(unittest.TestCase):
+    """
+    Unit tests for the GiteaReviewProvider static methods.
+    """
+
+    def setUp(self):
+        self.mock_args = Namespace(
+            repository="my-repo",
+            branch="main",
+            reviewer="me",
+            # OBS args are not used by this provider
+            project=None,
+            staging=None,
+            bugowner=False,
+        )
+
+    def test_build_list_params(self):
+        """
+        Verifies build_list_params correctly creates GiteaListRequestsParams.
+        """
+        params = GiteaReviewProvider.build_list_params(self.mock_args)
+        self.assertIsInstance(params, GiteaListRequestsParams)
+        self.assertEqual(params.repository, "my-repo")
+        self.assertEqual(params.branch, "main")
+        self.assertEqual(params.reviewer, "me")
+
+    def test_build_get_request_diff_params(self):
+        """
+        Verifies build_get_request_diff_params correctly creates GiteaGetRequestDiffParams.
+        """
+        params = GiteaReviewProvider.build_get_request_diff_params(
+            "101", self.mock_args
+        )
+        self.assertIsInstance(params, GiteaGetRequestDiffParams)
+        self.assertEqual(params.request_id, "101")
+        self.assertEqual(params.repository, "my-repo")
+
+    def test_build_approve_request_params(self):
+        """
+        Verifies build_approve_request_params correctly creates GiteaApproveRequestParams.
+        """
+        params = GiteaReviewProvider.build_approve_request_params("101", self.mock_args)
+        self.assertIsInstance(params, GiteaApproveRequestParams)
+        self.assertEqual(params.request_id, "101")
+        self.assertEqual(params.repository, "my-repo")
+        self.assertEqual(params.reviewer, "me")

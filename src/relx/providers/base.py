@@ -3,6 +3,7 @@ This module defines the base protocol for all provider implementations.
 """
 
 from typing import Dict, List, Generator, Protocol, Optional, Callable
+from argparse import Namespace
 
 from relx.providers.params import (
     ListRequestsParams,
@@ -155,8 +156,32 @@ class ReviewProvider(Protocol):
         """
         Approve a review request.
 
-        :param request_id: The ID of the request to approve.
-        :param is_bugowner: If True, performs the bugowner approval flow.
+        :param params: An object containing the parameters for the approval.
         :return: A list of strings representing the output of the approval commands.
+        """
+        ...
+
+    @classmethod
+    def build_list_params(cls, args: Namespace) -> ListRequestsParams:
+        """
+        Builds the appropriate ListRequestsParams object from parsed arguments.
+        """
+        ...
+
+    @classmethod
+    def build_get_request_diff_params(
+        cls, request_id: str, args: Namespace
+    ) -> GetRequestDiffParams:
+        """
+        Builds the appropriate GetRequestDiffParams object from parsed arguments.
+        """
+        ...
+
+    @classmethod
+    def build_approve_request_params(
+        cls, request_id: str, args: Namespace
+    ) -> ApproveRequestParams:
+        """
+        Builds the appropriate ApproveRequestParams object from parsed arguments.
         """
         ...
