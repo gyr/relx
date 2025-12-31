@@ -34,3 +34,24 @@ class Request:
     id: str
     name: str
     provider_type: str  # 'obs' or 'gitea'
+
+
+@dataclass
+class GetRequestDiffParams:
+    """Base class for get request diff parameters."""
+
+    request_id: str
+
+
+@dataclass
+class ObsGetRequestDiffParams(GetRequestDiffParams):
+    """Parameters for getting OBS request diff."""
+
+    pass
+
+
+@dataclass
+class GiteaGetRequestDiffParams(GetRequestDiffParams):
+    """Parameters for getting Gitea request diff."""
+
+    repository: str

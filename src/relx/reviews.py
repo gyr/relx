@@ -11,6 +11,9 @@ from relx.providers.params import (
     ObsListRequestsParams,
     GiteaListRequestsParams,
     Request,
+    GetRequestDiffParams,
+    ObsGetRequestDiffParams,
+    GiteaGetRequestDiffParams,
 )
 from relx.utils.logger import logger_setup
 from relx.utils.tools import pager_command
@@ -221,7 +224,14 @@ def main(args, config: Dict[str, Any]) -> None:
         )
         if review_request == "y":
             with console.status(f"[bold green]Fetching diff for {request.id}..."):
-                diff_content = review_provider.get_request_diff(request.id)
+                diff_params: GetRequestDiffParams
+                if is_gitea:
+                    diff_params = GiteaGetRequestDiffParams(
+                        request_id=request.id, repository=args.repository
+                    )
+                else:  # is_obs
+                    diff_params = ObsGetRequestDiffParams(request_id=request.id)
+                diff_content = review_provider.get_request_diff(diff_params)
             pager_command(["delta"], diff_content)  # Use pager_command directly
 
             request_approval = Prompt.ask(

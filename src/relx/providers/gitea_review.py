@@ -3,7 +3,13 @@ from typing import List, Any, Callable
 from .base import ReviewProvider
 import json
 
-from relx.providers.params import ListRequestsParams, GiteaListRequestsParams, Request
+from relx.providers.params import (
+    ListRequestsParams,
+    GiteaListRequestsParams,
+    Request,
+    GetRequestDiffParams,
+    GiteaGetRequestDiffParams,
+)
 from relx.utils.logger import logger_setup
 from relx.utils.tools import run_command
 
@@ -96,14 +102,33 @@ class GiteaReviewProvider(ReviewProvider):
 
         return requests
 
-    def get_request_diff(self, request_id: str) -> str:
+    def get_request_diff(self, params: GetRequestDiffParams) -> str:
         """
         Get the diff of a specific review request.
 
-        :param request_id: The ID of the request.
+        :param params: An object containing the parameters for the request diff.
         :return: A string containing the diff.
         """
-        return ""
+        if not isinstance(params, GiteaGetRequestDiffParams):
+            log.error("Invalid params type for GiteaReviewProvider.get_request_diff")
+            return ""
+
+        command_args = [
+            "git",
+            "obs",
+            "pr",
+            "show",
+            "--timeline",
+            "--patch",
+            f"{params.repository}#{params.request_id}",
+        ]
+        result = self._run_command(command_args)
+        if not result or not result.stdout:
+            log.info(
+                f"No diff found for PR {params.request_id} in {params.repository} or command returned empty output."
+            )
+            return ""
+        return result.stdout
 
     def approve_request(self, request_id: str, is_bugowner: bool) -> list[str]:
         """

@@ -2,7 +2,11 @@ import unittest
 from unittest.mock import MagicMock, call
 
 from relx.providers.obs_review import OBSReviewProvider
-from relx.providers.params import ObsListRequestsParams, Request
+from relx.providers.params import (
+    ObsListRequestsParams,
+    Request,
+    ObsGetRequestDiffParams,
+)
 
 
 class TestOBSReviewProvider(unittest.TestCase):
@@ -194,7 +198,8 @@ class TestOBSReviewProvider(unittest.TestCase):
         self.mock_command_runner.return_value = mock_output
 
         # Act
-        diff = self.provider.get_request_diff(request_id="123")
+        params = ObsGetRequestDiffParams(request_id="123")
+        diff = self.provider.get_request_diff(params)
 
         # Assert
         self.mock_command_runner.assert_called_once_with(
@@ -211,7 +216,8 @@ class TestOBSReviewProvider(unittest.TestCase):
 
         # Act & Assert
         with self.assertRaisesRegex(RuntimeError, "Mocked command failed"):
-            self.provider.get_request_diff(request_id="123")
+            params = ObsGetRequestDiffParams(request_id="123")
+            self.provider.get_request_diff(params)
 
     # --- Test cases for approve_request ---
     def test_approve_request_default_success(self):

@@ -2,7 +2,13 @@ from lxml import etree
 from typing import List, Any, Callable
 
 from .base import ReviewProvider
-from relx.providers.params import ListRequestsParams, ObsListRequestsParams, Request
+from relx.providers.params import (
+    ListRequestsParams,
+    ObsListRequestsParams,
+    Request,
+    GetRequestDiffParams,
+    ObsGetRequestDiffParams,
+)
 from relx.utils.logger import logger_setup
 from relx.utils.tools import run_command
 
@@ -86,14 +92,18 @@ class OBSReviewProvider(ReviewProvider):
                         requests.append(request_obj)
         return requests
 
-    def get_request_diff(self, request_id: str) -> str:
+    def get_request_diff(self, params: GetRequestDiffParams) -> str:
         """
         Get the diff of a specific review request.
 
-        :param request_id: The ID of the request.
+        :param params: An object containing the parameters for the request diff.
         :return: A string containing the diff.
         """
-        command = f"osc -A {self.api_url} review show -d {request_id}"
+        if not isinstance(params, ObsGetRequestDiffParams):
+            log.error("Invalid params type for OBSReviewProvider.get_request_diff")
+            return ""
+
+        command = f"osc -A {self.api_url} review show -d {params.request_id}"
         output = self._run_command(command.split())
         return output.stdout
 

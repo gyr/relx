@@ -8,6 +8,8 @@ from relx.providers.params import (
     ObsListRequestsParams,
     GiteaListRequestsParams,
     Request,
+    ObsGetRequestDiffParams,
+    GiteaGetRequestDiffParams,
 )
 from relx.exceptions import RelxUserCancelError
 
@@ -138,7 +140,9 @@ class TestReviewsCLI(unittest.TestCase):
                 is_bugowner_request=self.mock_args.bugowner,
             )
         )
-        self.mock_review_provider.get_request_diff.assert_called_once_with("123")
+        self.mock_review_provider.get_request_diff.assert_called_once_with(
+            ObsGetRequestDiffParams(request_id="123")
+        )
         mock_pager.assert_called_once_with(["delta"], "This is a diff")
         self.mock_review_provider.approve_request.assert_called_once_with("123", False)
 
@@ -369,3 +373,56 @@ class TestReviewsCLI(unittest.TestCase):
             "[bold red]Error: --prs must be a comma-separated list of numbers.[/bold red]"
         )
         mock_get_provider.assert_not_called()
+
+    @patch("relx.reviews.Console")
+    @patch("relx.reviews.pager_command")
+    @patch("relx.reviews.Prompt.ask")
+    @patch("relx.reviews.print_panel")
+    @patch("relx.reviews.get_review_provider")
+    def test_main_gitea_full_review(
+        self,
+        mock_get_provider,
+        mock_print_panel,
+        mock_prompt,
+        mock_pager,
+        mock_console_class,
+    ):
+        """
+        Tests the full happy path for Gitea: review and approve a request.
+        """
+        # Arrange
+        self.mock_args.project = None  # Unset OBS arg
+        self.mock_args.repository = "my-repo"
+        self.mock_args.branch = "main"
+        self.mock_args.reviewer = "me"
+        self.mock_args.prs = None  # Ensure prs is not set
+
+        mock_get_provider.return_value = self.mock_review_provider
+        self.mock_review_provider.list_requests.return_value = [
+            Request(id="42", name="Implement feature", provider_type="gitea")
+        ]
+        self.mock_review_provider.get_request_diff.return_value = "This is a gitea diff"
+        self.mock_review_provider.approve_request.return_value = ["Approved."]
+
+        # Simulate user input: y (start), y (review), y (approve)
+        mock_prompt.side_effect = ["y", "y", "y"]
+
+        # Act
+        reviews.main(self.mock_args, self.mock_config)
+
+        # Assert
+        self.mock_review_provider.list_requests.assert_called_once_with(
+            GiteaListRequestsParams(
+                repository="my-repo",
+                branch="main",
+                reviewer="me",
+            )
+        )
+        self.mock_review_provider.get_request_diff.assert_called_once_with(
+            GiteaGetRequestDiffParams(request_id="42", repository="my-repo")
+        )
+        mock_pager.assert_called_once_with(["delta"], "This is a gitea diff")
+        self.mock_review_provider.approve_request.assert_called_once_with("42", False)
+
+        self.assertIn(call(["Approved."]), mock_print_panel.call_args_list)
+        self.assertIn(call(["All reviews done."]), mock_print_panel.call_args_list)

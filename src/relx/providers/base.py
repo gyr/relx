@@ -4,7 +4,7 @@ This module defines the base protocol for all provider implementations.
 
 from typing import Dict, List, Generator, Protocol, Optional, Callable
 
-from relx.providers.params import ListRequestsParams, Request
+from relx.providers.params import ListRequestsParams, Request, GetRequestDiffParams
 
 
 class ArtifactProvider(Protocol):
@@ -129,7 +129,7 @@ class ReviewProvider(Protocol):
         """
         ...
 
-    def get_request_diff(self, request_id: str) -> str:
+    def get_request_diff(self, params: GetRequestDiffParams) -> str:
         """
         Get the diff of a specific review request.
 
