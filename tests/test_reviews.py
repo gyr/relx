@@ -10,6 +10,8 @@ from relx.providers.params import (
     Request,
     ObsGetRequestDiffParams,
     GiteaGetRequestDiffParams,
+    ObsApproveRequestParams,
+    GiteaApproveRequestParams,
 )
 from relx.exceptions import RelxUserCancelError
 
@@ -144,7 +146,9 @@ class TestReviewsCLI(unittest.TestCase):
             ObsGetRequestDiffParams(request_id="123")
         )
         mock_pager.assert_called_once_with(["delta"], "This is a diff")
-        self.mock_review_provider.approve_request.assert_called_once_with("123", False)
+        self.mock_review_provider.approve_request.assert_called_once_with(
+            ObsApproveRequestParams(request_id="123", is_bugowner=False)
+        )
 
         self.assertIn(call(["Approved."]), mock_print_panel.call_args_list)
         self.assertIn(call(["All reviews done."]), mock_print_panel.call_args_list)
@@ -422,7 +426,11 @@ class TestReviewsCLI(unittest.TestCase):
             GiteaGetRequestDiffParams(request_id="42", repository="my-repo")
         )
         mock_pager.assert_called_once_with(["delta"], "This is a gitea diff")
-        self.mock_review_provider.approve_request.assert_called_once_with("42", False)
+        self.mock_review_provider.approve_request.assert_called_once_with(
+            GiteaApproveRequestParams(
+                request_id="42", repository="my-repo", reviewer=self.mock_args.reviewer
+            )
+        )
 
         self.assertIn(call(["Approved."]), mock_print_panel.call_args_list)
         self.assertIn(call(["All reviews done."]), mock_print_panel.call_args_list)

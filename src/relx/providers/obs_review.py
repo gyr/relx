@@ -8,6 +8,8 @@ from relx.providers.params import (
     Request,
     GetRequestDiffParams,
     ObsGetRequestDiffParams,
+    ApproveRequestParams,
+    ObsApproveRequestParams,
 )
 from relx.utils.logger import logger_setup
 from relx.utils.tools import run_command
@@ -107,17 +109,20 @@ class OBSReviewProvider(ReviewProvider):
         output = self._run_command(command.split())
         return output.stdout
 
-    def approve_request(self, request_id: str, is_bugowner: bool) -> list[str]:
+    def approve_request(self, params: ApproveRequestParams) -> list[str]:
         """
         Approve a review request.
 
-        :param request_id: The ID of the request to approve.
-        :param is_bugowner: If True, performs the bugowner approval flow.
+        :param params: An object containing the parameters for the approval.
         :return: A list of strings representing the output of the approval commands.
         """
+        if not isinstance(params, ObsApproveRequestParams):
+            log.error("Invalid params type for OBSReviewProvider.approve_request")
+            return []
+
         groups: list = ["sle-release-managers"]
         lines = []
-        if is_bugowner:
+        if params.is_bugowner:
             groups.append("sle-staging-managers")
         for group in groups:
             command_args = [
@@ -130,7 +135,7 @@ class OBSReviewProvider(ReviewProvider):
                 "OK",  # Pass "OK" directly as an argument
                 "-G",
                 group,
-                request_id,
+                params.request_id,
             ]
             output = self._run_command(command_args)
             lines.append(f"{group}: {output.stdout}")

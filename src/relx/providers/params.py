@@ -55,3 +55,25 @@ class GiteaGetRequestDiffParams(GetRequestDiffParams):
     """Parameters for getting Gitea request diff."""
 
     repository: str
+
+
+@dataclass
+class ApproveRequestParams:
+    """Base class for approve request parameters."""
+
+    request_id: str
+
+
+@dataclass
+class ObsApproveRequestParams(ApproveRequestParams):
+    """Parameters for approving OBS requests."""
+
+    is_bugowner: bool = False
+
+
+@dataclass
+class GiteaApproveRequestParams(ApproveRequestParams):
+    """Parameters for approving Gitea requests."""
+
+    repository: str
+    reviewer: str

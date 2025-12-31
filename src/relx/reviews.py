@@ -14,6 +14,9 @@ from relx.providers.params import (
     GetRequestDiffParams,
     ObsGetRequestDiffParams,
     GiteaGetRequestDiffParams,
+    ApproveRequestParams,
+    ObsApproveRequestParams,
+    GiteaApproveRequestParams,
 )
 from relx.utils.logger import logger_setup
 from relx.utils.tools import pager_command
@@ -241,9 +244,18 @@ def main(args, config: Dict[str, Any]) -> None:
             )
             if request_approval == "y":
                 with console.status(f"[bold green]Approving {request.id}..."):
-                    approval_lines = review_provider.approve_request(
-                        request.id, args.bugowner
-                    )
+                    approve_params: ApproveRequestParams
+                    if is_gitea:
+                        approve_params = GiteaApproveRequestParams(
+                            request_id=request.id,
+                            repository=args.repository,
+                            reviewer=args.reviewer,
+                        )
+                    else:  # is_obs
+                        approve_params = ObsApproveRequestParams(
+                            request_id=request.id, is_bugowner=args.bugowner
+                        )
+                    approval_lines = review_provider.approve_request(approve_params)
                 print_panel(approval_lines)
             elif request_approval == "a":
                 raise RelxUserCancelError("User aborted during approval.")

@@ -9,6 +9,8 @@ from relx.providers.params import (
     Request,
     GetRequestDiffParams,
     GiteaGetRequestDiffParams,
+    ApproveRequestParams,
+    GiteaApproveRequestParams,
 )
 from relx.utils.logger import logger_setup
 from relx.utils.tools import run_command
@@ -130,12 +132,30 @@ class GiteaReviewProvider(ReviewProvider):
             return ""
         return result.stdout
 
-    def approve_request(self, request_id: str, is_bugowner: bool) -> list[str]:
+    def approve_request(self, params: ApproveRequestParams) -> list[str]:
         """
         Approve a review request.
 
-        :param request_id: The ID of the request to approve.
-        :param is_bugowner: If True, performs the bugowner approval flow.
+        :param params: An object containing the parameters for the approval.
         :return: A list of strings representing the output of the approval commands.
         """
-        return []
+        if not isinstance(params, GiteaApproveRequestParams):
+            log.error("Invalid params type for GiteaReviewProvider.approve_request")
+            return []
+
+        command_args = [
+            "git",
+            "obs",
+            "pr",
+            "comment",
+            f"{params.repository}#{params.request_id}",
+            "-m",
+            f"@{params.reviewer}: approve",  # Corrected: removed leading space
+        ]
+        result = self._run_command(command_args)
+        if not result:
+            log.info(
+                f"No output from approve comment for PR {params.request_id} in {params.repository}."
+            )
+            return []
+        return [result.stdout]

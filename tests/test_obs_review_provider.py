@@ -6,6 +6,7 @@ from relx.providers.params import (
     ObsListRequestsParams,
     Request,
     ObsGetRequestDiffParams,
+    ObsApproveRequestParams,
 )
 
 
@@ -230,9 +231,8 @@ class TestOBSReviewProvider(unittest.TestCase):
         )
 
         # Act
-        output_lines = self.provider.approve_request(
-            request_id="123", is_bugowner=False
-        )
+        params = ObsApproveRequestParams(request_id="123", is_bugowner=False)
+        output_lines = self.provider.approve_request(params)
 
         # Assert
         self.mock_command_runner.assert_called_once_with(
@@ -265,7 +265,8 @@ class TestOBSReviewProvider(unittest.TestCase):
         ]
 
         # Act
-        output_lines = self.provider.approve_request(request_id="123", is_bugowner=True)
+        params = ObsApproveRequestParams(request_id="123", is_bugowner=True)
+        output_lines = self.provider.approve_request(params)
 
         # Assert
         expected_calls = [
@@ -316,7 +317,8 @@ class TestOBSReviewProvider(unittest.TestCase):
 
         # Act & Assert
         with self.assertRaisesRegex(RuntimeError, "Mocked command failed"):
-            self.provider.approve_request(request_id="123", is_bugowner=False)
+            params = ObsApproveRequestParams(request_id="123", is_bugowner=False)
+            self.provider.approve_request(params)
 
 
 if __name__ == "__main__":
