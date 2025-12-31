@@ -125,6 +125,14 @@ class ReviewProvider(Protocol):
     A protocol that defines the interface for a code review provider.
     """
 
+    def __init__(self, api_url: str):
+        """
+        Initializes the ReviewProvider.
+
+        :param api_url: The API URL for the provider.
+        """
+        ...
+
     def list_requests(self, params: ListRequestsParams) -> list[Request]:
         """
         List all requests in a 'review' state.

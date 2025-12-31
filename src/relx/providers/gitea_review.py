@@ -14,6 +14,7 @@ from relx.providers.params import (
 )
 from relx.utils.logger import logger_setup
 from relx.utils.tools import run_command
+from relx.providers import register_review_provider
 
 
 log = logger_setup(__name__)
@@ -159,3 +160,6 @@ class GiteaReviewProvider(ReviewProvider):
             )
             return []
         return [result.stdout]
+
+
+register_review_provider("gitea", GiteaReviewProvider)

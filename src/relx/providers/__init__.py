@@ -2,14 +2,22 @@
 This module contains the factory for creating provider instances.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Type
 
 from .base import ArtifactProvider, UserProvider, PackageProvider, ReviewProvider
 from .obs_artifact import OBSArtifactProvider
 from .obs_user import OBSUserProvider
 from .obs_package import OBSPackageProvider
-from .obs_review import OBSReviewProvider
-from .gitea_review import GiteaReviewProvider  # NEW IMPORT
+
+
+_REVIEW_PROVIDERS: Dict[str, Type[ReviewProvider]] = {}
+
+
+def register_review_provider(name: str, provider: Type[ReviewProvider]):
+    """
+    Registers a review provider class in the central registry.
+    """
+    _REVIEW_PROVIDERS[name] = provider
 
 
 def get_artifact_provider(
@@ -76,19 +84,18 @@ def get_review_provider(provider_name: str, api_url: str) -> ReviewProvider:
     """
     Factory function to get a ReviewProvider instance.
 
-    :param provider_name: The name of the provider (e.g., "obs").
-    :param api_url: The API URL for the provider (e.g., OBS instance URL).
+    :param provider_name: The name of the provider (e.g., "obs", "gitea").
+    :param api_url: The API URL for the provider.
     :return: An instance of a ReviewProvider.
     :raises ValueError: If an unknown provider name is given.
     """
-    if provider_name == "obs":
-        return OBSReviewProvider(
-            api_url=api_url,
-        )
-    elif provider_name == "gitea":  # NEW CONDITION
-        return GiteaReviewProvider(
-            api_url=api_url,
-        )
-    # Add other providers here in the future
+    provider_class = _REVIEW_PROVIDERS.get(provider_name)
+    if provider_class:
+        return provider_class(api_url=api_url)
     else:
         raise ValueError(f"Unknown review provider: {provider_name}")
+
+
+# Import provider modules to trigger registration
+from . import obs_review  # noqa: E402, F401
+from . import gitea_review  # noqa: E402, F401

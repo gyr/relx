@@ -13,6 +13,7 @@ from relx.providers.params import (
 )
 from relx.utils.logger import logger_setup
 from relx.utils.tools import run_command
+from relx.providers import register_review_provider
 
 
 log = logger_setup(__name__)
@@ -140,3 +141,6 @@ class OBSReviewProvider(ReviewProvider):
             output = self._run_command(command_args)
             lines.append(f"{group}: {output.stdout}")
         return lines
+
+
+register_review_provider("obs", OBSReviewProvider)
