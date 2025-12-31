@@ -1,11 +1,12 @@
 import argparse
+from argparse import Namespace
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
-from typing import Dict, Any
+from typing import Dict, Any, List
 
-from relx.exceptions import RelxUserCancelError
-from relx.providers import get_review_provider
+from relx.exceptions import RelxUserCancelError, RelxInvalidParamsError
+from relx.providers import get_review_provider, ReviewProvider
 from relx.providers.params import Request
 from relx.utils.logger import logger_setup
 from relx.utils.tools import pager_command
@@ -103,93 +104,90 @@ def build_parser(parent_parser, config: Dict[str, Any] | None) -> None:
     subparser.set_defaults(func=main)
 
 
-def main(args, config: Dict[str, Any]) -> None:
+def _validate_args(args: Namespace) -> None:
     """
-    Main method that handles review requests.
-
-    :param args: Argparse Namespace that has all the arguments
-    :param config: Lua config table
+    Validates the command-line arguments.
+    Raises RelxInvalidParamsError if validation fails.
     """
-    console = Console()
-
     is_obs = args.project is not None
     is_gitea = all([args.repository, args.branch, args.reviewer])
 
-    # Enforce mutual exclusivity
     if is_obs and is_gitea:
-        console.print(
-            "[bold red]Error: Please provide arguments for either OBS (--project) or Gitea, not both.[/bold red]"
+        raise RelxInvalidParamsError(
+            "Please provide arguments for either OBS (--project) or Gitea, not both."
         )
-        return
 
-    # Enforce dependency of staging/bugowner on project
     if (args.staging is not None or args.bugowner) and not is_obs:
-        console.print(
-            "[bold red]Error: --project is required when using --staging or --bugowner.[/bold red]"
+        raise RelxInvalidParamsError(
+            "--project is required when using --staging or --bugowner."
         )
-        return
 
-    # Enforce dependency of prs on gitea
     if args.prs and not is_gitea:
-        console.print(
-            "[bold red]Error: --prs can only be used with Gitea arguments (--repository, --branch, --reviewer).[/bold red]"
+        raise RelxInvalidParamsError(
+            "--prs can only be used with Gitea arguments (--repository, --branch, --reviewer)."
         )
-        return
 
-    # Validate --prs value early if it's provided with Gitea args
     if is_gitea and args.prs:
         try:
-            # We parse it here just for validation. The actual filtering happens later.
             _ = {int(pr_id.strip()) for pr_id in args.prs.split(",")}
-        except ValueError:
-            console.print(
-                "[bold red]Error: --prs must be a comma-separated list of numbers.[/bold red]"
-            )
-            return
+        except ValueError as exc:
+            raise RelxInvalidParamsError(
+                "--prs must be a comma-separated list of numbers."
+            ) from exc
 
-    provider_name = "gitea" if is_gitea else "obs"
     if not is_gitea and not is_obs:
-        console.print(
-            "[bold red]Error: Please provide arguments for a provider. For OBS: --project. For Gitea: --repository, --branch, AND --reviewer.[/bold red]"
+        raise RelxInvalidParamsError(
+            "Please provide arguments for a provider. For OBS: --project. "
+            "For Gitea: --repository, --branch, AND --reviewer."
         )
-        return
 
-    review_provider = get_review_provider(
-        provider_name=provider_name, api_url=args.osc_instance
-    )
-    # Get the provider class to access static methods
+
+def _fetch_and_filter_requests(
+    review_provider: ReviewProvider, args: Namespace
+) -> List[Request]:
+    """
+    Fetches all requests and applies filters (e.g., --prs).
+    """
     ProviderClass = type(review_provider)
+    console = Console()
 
-    requests = []
     with console.status("[bold green]Fetching review requests..."):
         list_params = ProviderClass.build_list_params(args)
         all_requests = review_provider.list_requests(list_params)
 
-    if args.prs and is_gitea:
+    # Filter by --prs if provided
+    if args.prs:
         try:
             requested_pr_ids = {int(pr_id.strip()) for pr_id in args.prs.split(",")}
+            filtered_requests = [
+                req for req in all_requests if int(req.id) in requested_pr_ids
+            ]
+            found_pr_ids = {int(req.id) for req in filtered_requests}
+            not_found_ids = requested_pr_ids - found_pr_ids
+            if not_found_ids:
+                console.print(
+                    f"[bold yellow]Warning: The following PRs were not found: {', '.join(map(str, not_found_ids))}[/bold yellow]"
+                )
+            return filtered_requests
         except ValueError:
-            console.print(
-                "[bold red]Error: --prs must be a comma-separated list of numbers.[/bold red]"
+            # This should be caught by _validate_args, but we handle it defensively
+            raise RelxInvalidParamsError(
+                "--prs must be a comma-separated list of numbers."
             )
-            return
+    return all_requests
 
-        requests = [req for req in all_requests if int(req.id) in requested_pr_ids]
-        found_pr_ids = {int(req.id) for req in requests}
-        not_found_ids = requested_pr_ids - found_pr_ids
-        if not_found_ids:
-            console.print(
-                f"[bold yellow]Warning: The following PRs were not found: {', '.join(map(str, not_found_ids))}[/bold yellow]"
-            )
-    else:
-        requests = all_requests
 
-    print_panel(
-        show_request_list(requests), f"Request Reviews for {provider_name.upper()}"
-    )
+def _process_review_loop(
+    console: Console,
+    review_provider: ReviewProvider,
+    requests: List[Request],
+    args: Namespace,
+) -> None:
+    """
+    The main user-facing interaction loop for reviewing requests.
+    """
     total_requests = len(requests)
-    if total_requests == 0:
-        return
+    ProviderClass = type(review_provider)
 
     start_review = Prompt.ask(
         f">>> Start the reviews ({total_requests})?", choices=["y", "n"], default="y"
@@ -209,7 +207,7 @@ def main(args, config: Dict[str, Any]) -> None:
                     request.id, args
                 )
                 diff_content = review_provider.get_request_diff(diff_params)
-            pager_command(["delta"], diff_content)  # Use pager_command directly
+            pager_command(["delta"], diff_content)
 
             request_approval = Prompt.ask(
                 f">>> Approve {request.id} - {request.name}?",
@@ -229,3 +227,33 @@ def main(args, config: Dict[str, Any]) -> None:
             raise RelxUserCancelError("User aborted in main loop.")
 
     print_panel(["All reviews done."])
+
+
+def main(args: Namespace, config: Dict[str, Any]) -> None:
+    """
+    Main method that handles review requests.
+    """
+    console = Console()
+    try:
+        _validate_args(args)
+    except RelxInvalidParamsError as e:
+        console.print(f"[bold red]Error: {e}[/bold red]")
+        return
+
+    is_gitea = all([args.repository, args.branch, args.reviewer])
+    provider_name = "gitea" if is_gitea else "obs"
+
+    review_provider = get_review_provider(
+        provider_name=provider_name, api_url=args.osc_instance
+    )
+
+    requests = _fetch_and_filter_requests(review_provider, args)
+
+    print_panel(
+        show_request_list(requests), f"Request Reviews for {provider_name.upper()}"
+    )
+
+    if not requests:
+        return
+
+    _process_review_loop(console, review_provider, requests, args)

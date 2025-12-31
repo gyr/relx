@@ -19,3 +19,9 @@ class RelxResourceNotFoundError(RelxError):
     """Raised when a requested resource (user, package, etc.) is not found."""
 
     pass
+
+
+class RelxInvalidParamsError(RelxError):
+    """Raised when command-line arguments are invalid or inconsistent."""
+
+    pass
