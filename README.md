@@ -64,6 +64,23 @@ Once installed, you can use the `relx` command.
 
     ```
 
+    *   **Reviews Subcommand:**
+
+        The `reviews` subcommand allows you to list, view diffs, and approve review requests from different providers. It currently supports Open Build Service (OBS) and Gitea.
+
+        -   **OBS Provider:**
+            Requires `--project` (e.g., `-p myproject`). Can optionally filter by `--staging` (e.g., `-s A`) or `--bugowner`.
+
+        -   **Gitea Provider:**
+            Requires `--repository`, `--branch`, and `--reviewer`. Can optionally filter by specific pull request IDs using `--prs` (e.g., `--prs 123,456`).
+
+        **Example: List and review Gitea pull requests**
+
+        ```bash
+        relx reviews --repository my/repo --branch main --reviewer "gitea-user" --prs 123,456
+        ```
+
+
 *   **Common arguments:**
 
     The main `relx` command also accepts global arguments like `--osc-instance` and `--osc-config`.
