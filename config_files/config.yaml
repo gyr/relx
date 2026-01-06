@@ -20,3 +20,5 @@ artifacts:
     - ".verified"
   invalid_start:
     - "_"
+gitea:
+  reviewer: "sle-release-manager-review"

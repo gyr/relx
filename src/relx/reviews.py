@@ -110,7 +110,7 @@ def _validate_args(args: Namespace) -> None:
     Raises RelxInvalidParamsError if validation fails.
     """
     is_obs = args.project is not None
-    is_gitea = all([args.repository, args.branch, args.reviewer])
+    is_gitea = all([args.repository, args.branch])
 
     if is_obs and is_gitea:
         raise RelxInvalidParamsError(
@@ -124,7 +124,7 @@ def _validate_args(args: Namespace) -> None:
 
     if args.prs and not is_gitea:
         raise RelxInvalidParamsError(
-            "--prs can only be used with Gitea arguments (--repository, --branch, --reviewer)."
+            "--prs can only be used with Gitea arguments (--repository, --branch)."
         )
 
     if is_gitea and args.prs:
@@ -138,7 +138,7 @@ def _validate_args(args: Namespace) -> None:
     if not is_gitea and not is_obs:
         raise RelxInvalidParamsError(
             "Please provide arguments for a provider. For OBS: --project. "
-            "For Gitea: --repository, --branch, AND --reviewer."
+            "For Gitea: --repository and --branch."
         )
 
 
@@ -240,7 +240,17 @@ def main(args: Namespace, config: Dict[str, Any]) -> None:
         console.print(f"[bold red]Error: {e}[/bold red]")
         return
 
-    is_gitea = all([args.repository, args.branch, args.reviewer])
+    is_gitea = all([args.repository, args.branch])
+    if is_gitea:
+        if not args.reviewer:
+            gitea_config = config.get("gitea", {})
+            args.reviewer = gitea_config.get("reviewer")
+        if not args.reviewer:
+            console.print(
+                "[bold red]Error: Gitea reviewer must be provided with --reviewer or set in config.[/bold red]"
+            )
+            return
+
     provider_name = "gitea" if is_gitea else "obs"
 
     review_provider = get_review_provider(
