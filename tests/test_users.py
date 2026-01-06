@@ -4,6 +4,7 @@ from argparse import Namespace
 
 from relx import users
 from relx.providers import base
+from relx.models import OBSUser, OBSGroup
 from relx.exceptions import RelxResourceNotFoundError
 
 
@@ -50,12 +51,12 @@ class TestUsersCLI(unittest.TestCase):
         mock_console_instance = mock_console_class.return_value
         mock_table_instance = mock_table_class.return_value
 
-        expected_group_info = {
-            "Group": "test-group",
-            "Email": "group@example.com",
-            "Maintainers": ["maint1", "maint2"],
-            "Users": ["userA", "userB"],
-        }
+        expected_group_info = OBSGroup(
+            name="test-group",
+            email="group@example.com",
+            maintainers=["maint1", "maint2"],
+            users=["userA", "userB"],
+        )
         self.mock_user_provider.get_group.return_value = expected_group_info
         mock_get_user_provider.return_value = self.mock_user_provider
 
@@ -70,8 +71,8 @@ class TestUsersCLI(unittest.TestCase):
         expected_calls = [
             call("Group", "test-group"),
             call("Email", "group@example.com"),
-            call("Maintainers", "['maint1', 'maint2']"),
-            call("Users", "['userA', 'userB']"),
+            call("Maintainers", "maint1, maint2"),
+            call("Users", "userA, userB"),
         ]
         mock_table_instance.add_row.assert_has_calls(expected_calls, any_order=True)
 
@@ -115,12 +116,12 @@ class TestUsersCLI(unittest.TestCase):
         mock_table_instance = mock_table_class.return_value
 
         expected_user_info = [
-            {
-                "User": "testuser",
-                "Email": "user@example.com",
-                "Name": "Test User",
-                "State": "confirmed",
-            }
+            OBSUser(
+                login="testuser",
+                email="user@example.com",
+                realname="Test User",
+                state="confirmed",
+            )
         ]
         self.mock_user_provider.get_user.return_value = iter(expected_user_info)
         mock_get_user_provider.return_value = self.mock_user_provider

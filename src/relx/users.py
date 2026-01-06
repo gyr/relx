@@ -76,9 +76,13 @@ def _search_group(
     group_info = user_provider.get_group(group=search_text, is_fulllist=True)
     if not group_info:
         raise RelxResourceNotFoundError(f"Group '{search_text}' not found.")
-    for key, value in group_info.items():
-        log.debug("%s: %s", key, value)
-        table.add_row(key, str(value))
+
+    log.debug("Group Info: %s", group_info)
+    table.add_row("Group", group_info.name)
+    table.add_row("Email", group_info.email)
+    table.add_row("Maintainers", ", ".join(group_info.maintainers))
+    if group_info.users:
+        table.add_row("Users", ", ".join(group_info.users))
 
 
 def _search_user(
@@ -98,8 +102,10 @@ def _search_user(
     if not user_results:
         raise RelxResourceNotFoundError(f"User '{search_text}' not found.")
 
-    for info in user_results:
-        for key, value in info.items():
-            log.debug("%s: %s", key, value)
-            table.add_row(key, str(value))
+    for user in user_results:
+        log.debug("User Info: %s", user)
+        table.add_row("User", user.login)
+        table.add_row("Email", user.email)
+        table.add_row("Name", user.realname)
+        table.add_row("State", user.state)
         table.add_row(Rule(style="dim"), Rule(style="dim"))

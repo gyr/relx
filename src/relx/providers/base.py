@@ -11,6 +11,7 @@ from relx.providers.params import (
     GetRequestDiffParams,
     ApproveRequestParams,
 )
+from relx.models import OBSUser, OBSGroup
 
 
 class ArtifactProvider(Protocol):
@@ -53,7 +54,7 @@ class UserProvider(Protocol):
 
     def get_user(
         self, search_text: str, search_by: str
-    ) -> Generator[Dict[str, Optional[str]], None, None]:
+    ) -> Generator[OBSUser, None, None]:
         """
         Given a search text, return the OBS user of the bugowner
 
@@ -63,9 +64,7 @@ class UserProvider(Protocol):
         """
         ...
 
-    def get_group(
-        self, group: str, is_fulllist: bool = False
-    ) -> Dict[str, Optional[str] | List[Optional[str]]]:
+    def get_group(self, group: str, is_fulllist: bool = False) -> OBSGroup:
         """
         Given a group name return the OBS info about it."
 
@@ -75,7 +74,7 @@ class UserProvider(Protocol):
         """
         ...
 
-    def get_entity_info(self, name: str, is_group: bool) -> dict:
+    def get_entity_info(self, name: str, is_group: bool) -> OBSUser | OBSGroup:
         """
         Get information about an entity, which can be a user or a group.
 

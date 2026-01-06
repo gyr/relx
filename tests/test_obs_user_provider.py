@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from relx.providers.obs_user import OBSUserProvider
+from relx.models import OBSUser, OBSGroup
 
 
 class TestOBSUserProvider(unittest.TestCase):
@@ -44,10 +45,10 @@ class TestOBSUserProvider(unittest.TestCase):
         self.mock_command_runner.assert_called_once_with(
             ["osc", "-A", self.api_url, "api", "/group/test-group"]
         )
-        self.assertEqual(group_info["Group"], "Test Group")
-        self.assertEqual(group_info["Email"], "test@example.com")
-        self.assertEqual(group_info["Maintainers"], ["maintainer1", "maintainer2"])
-        self.assertNotIn("Users", group_info)  # Should not include users by default
+        self.assertEqual(group_info.name, "Test Group")
+        self.assertEqual(group_info.email, "test@example.com")
+        self.assertEqual(group_info.maintainers, ["maintainer1", "maintainer2"])
+        self.assertEqual(group_info.users, [])  # Should not include users by default
 
     def test_get_group_success_full_list(self):
         """
@@ -75,10 +76,10 @@ class TestOBSUserProvider(unittest.TestCase):
         group_info = self.provider.get_group(group="test-group-full", is_fulllist=True)
 
         # Assert
-        self.assertEqual(group_info["Group"], "Test Group Full")
-        self.assertEqual(group_info["Maintainers"], ["maint3"])
+        self.assertEqual(group_info.name, "Test Group Full")
+        self.assertEqual(group_info.maintainers, ["maint3"])
         # Based on the original parsing logic, it will find users in nested person tags
-        self.assertEqual(group_info["Users"], ["userA", "userB", "userC"])
+        self.assertEqual(group_info.users, ["userA", "userB", "userC"])
 
     def test_get_group_not_found(self):
         """
@@ -118,10 +119,10 @@ class TestOBSUserProvider(unittest.TestCase):
             ["osc", "-A", self.api_url, "api", '/search/person?match=@login="testuser"']
         )
         self.assertEqual(len(users), 1)
-        self.assertEqual(users[0]["User"], "testuser")
-        self.assertEqual(users[0]["Email"], "test@user.com")
-        self.assertEqual(users[0]["Name"], "Test User")
-        self.assertEqual(users[0]["State"], "confirmed")
+        self.assertEqual(users[0].login, "testuser")
+        self.assertEqual(users[0].email, "test@user.com")
+        self.assertEqual(users[0].realname, "Test User")
+        self.assertEqual(users[0].state, "confirmed")
 
     def test_get_user_by_email_success(self):
         """
@@ -157,7 +158,7 @@ class TestOBSUserProvider(unittest.TestCase):
             ]
         )
         self.assertEqual(len(users), 1)
-        self.assertEqual(users[0]["User"], "emailuser")
+        self.assertEqual(users[0].login, "emailuser")
 
     def test_get_user_by_realname_success(self):
         """
@@ -193,7 +194,7 @@ class TestOBSUserProvider(unittest.TestCase):
             ]
         )
         self.assertEqual(len(users), 1)
-        self.assertEqual(users[0]["User"], "realnameuser")
+        self.assertEqual(users[0].login, "realnameuser")
 
     def test_get_user_not_found(self):
         """
@@ -241,7 +242,9 @@ class TestOBSUserProvider(unittest.TestCase):
         """
         # Arrange
         self.provider.get_user = MagicMock()
-        user_data = {"User": "testuser", "Email": "test@suse.com"}
+        user_data = OBSUser(
+            login="testuser", email="test@suse.com", realname=None, state=None
+        )
         self.provider.get_user.return_value = iter([user_data])
 
         # Act
@@ -259,7 +262,7 @@ class TestOBSUserProvider(unittest.TestCase):
         """
         # Arrange
         self.provider.get_group = MagicMock()
-        group_data = {"Group": "testgroup", "Maintainers": ["user1"]}
+        group_data = OBSGroup(name="testgroup", email=None, maintainers=["user1"])
         self.provider.get_group.return_value = group_data
 
         # Act

@@ -1,8 +1,9 @@
 from lxml import etree
-from typing import Dict, List, Generator, Optional, Callable, Any
+from typing import List, Generator, Callable, Any
 
 from relx.utils.logger import logger_setup
 from relx.utils.tools import run_command
+from relx.models import OBSUser, OBSGroup
 
 from .base import UserProvider
 
@@ -23,51 +24,52 @@ class OBSUserProvider(UserProvider):
         self.api_url = api_url
         self._run_command = command_runner
 
-    def get_group(
-        self, group: str, is_fulllist: bool = False
-    ) -> Dict[str, Optional[str] | List[Optional[str]]]:
+    def get_group(self, group: str, is_fulllist: bool = False) -> OBSGroup:
         """
         Given a group name return the OBS info about it."
 
         :param group: OBS group name
         :param is_fulllist: If True, return full list of people in the group.
-        :return: OBS group info
+        :return: OBS group info as an OBSGroup object.
         """
         command_args = ["osc", "-A", self.api_url, "api", f"/group/{group}"]
         output = self._run_command(command_args)
         tree = etree.fromstring(output.stdout.encode())
-        info: Dict[str, Optional[str] | List[Optional[str]]] = {}
 
-        title = tree.find("title")
-        info["Group"] = title.text if title is not None else None
+        title_tag = tree.find("title")
+        email_tag = tree.find("email")
 
-        email = tree.find("email")
-        info["Email"] = email.text if email is not None else None
+        maintainers = [
+            userid
+            for tag in tree.findall("maintainer")
+            if (userid := tag.get("userid")) is not None
+        ]
 
-        maintainers = tree.findall("maintainer")
-        info["Maintainers"] = [tag.get("userid") for tag in maintainers]
-
+        users = []
         if is_fulllist:
-            people = tree.findall("person")
-            users = []
-            for person in people:
+            for person in tree.findall("person"):
                 for user in person.findall("person"):
-                    users.append(user.get("userid"))
-            info["Users"] = users
+                    if user_id := user.get("userid"):
+                        users.append(user_id)
 
-        return info
+        return OBSGroup(
+            name=title_tag.text if title_tag is not None else None,
+            email=email_tag.text if email_tag is not None else None,
+            maintainers=maintainers,
+            users=users,
+        )
 
     def get_user(
         self,
         search_text: str,
         search_by: str,
-    ) -> Generator[Dict[str, Optional[str]], None, None]:
+    ) -> Generator[OBSUser, None, None]:
         """
         Given a search text, return the OBS user of the bugowner"
 
         :param search_text: Text to be search OBS project for user info
         :param search_by: "login", "email", or "realname"
-        :return: OBS user info
+        :return: A generator of OBSUser objects.
         """
         # Manually build the command list to ensure arguments with spaces and
         # quotes are passed correctly to the subprocess.
@@ -100,15 +102,14 @@ class OBSUserProvider(UserProvider):
             realname_tag = person.find("realname")
             state_tag = person.find("state")
 
-            info = {
-                "User": login_tag.text if login_tag is not None else None,
-                "Email": email_tag.text if email_tag is not None else None,
-                "Name": realname_tag.text if realname_tag is not None else None,
-                "State": state_tag.text if state_tag is not None else None,
-            }
-            yield info
+            yield OBSUser(
+                login=login_tag.text if login_tag is not None else None,
+                email=email_tag.text if email_tag is not None else None,
+                realname=realname_tag.text if realname_tag is not None else None,
+                state=state_tag.text if state_tag is not None else None,
+            )
 
-    def get_entity_info(self, name: str, is_group: bool) -> dict:
+    def get_entity_info(self, name: str, is_group: bool) -> OBSUser | OBSGroup:
         """
         Get information about an entity, which can be a user or a group.
 

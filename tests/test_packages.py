@@ -4,6 +4,7 @@ from argparse import Namespace
 
 from relx import packages
 from relx.providers import base
+from relx.models import OBSUser, OBSGroup
 
 
 class TestPackagesCLI(unittest.TestCase):
@@ -59,10 +60,9 @@ class TestPackagesCLI(unittest.TestCase):
             ["testuser"],
             False,
         )  # (owners, is_group)
-        self.mock_user_provider.get_entity_info.return_value = {
-            "User": "testuser",
-            "Email": "test@suse.com",
-        }
+        self.mock_user_provider.get_entity_info.return_value = OBSUser(
+            login="testuser", email="test@suse.com", realname="Test User", state=None
+        )
 
         # --- Act ---
         packages.main(self.mock_args, self.mock_config)
@@ -97,6 +97,7 @@ class TestPackagesCLI(unittest.TestCase):
             call("Shipped", "YES - fake_product"),
             call("User", "testuser"),
             call("Email", "test@suse.com"),
+            call("Name", "Test User"),
         ]
         mock_table_instance.add_row.assert_has_calls(expected_rows)
         mock_console_instance.print.assert_called_once_with(mock_table_instance)
@@ -136,8 +137,8 @@ class TestPackagesCLI(unittest.TestCase):
             (["group1"], True),
         ]
         self.mock_user_provider.get_entity_info.side_effect = [
-            {"User": "user1"},
-            {"Group": "group1"},
+            OBSUser(login="user1", email=None, realname=None, state=None),
+            OBSGroup(name="group1", email=None, maintainers=[], users=[]),
         ]
 
         # --- Act ---

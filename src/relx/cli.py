@@ -63,7 +63,7 @@ def load_all_modules(parser: argparse.ArgumentParser) -> None:
             and not path.name.startswith("__")
         ):
             module_name = path.name[:-3]
-            if module_name not in ["cli", "exceptions", "requests"]:
+            if module_name not in ["cli", "exceptions", "requests", "models"]:
                 module_names.append(module_name)
 
     module_names.sort()

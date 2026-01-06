@@ -1,6 +1,6 @@
 from rich.console import Console
 from rich.table import Table
-from typing import Dict, Any
+from typing import Dict, Any, cast
 from argparse import Namespace
 
 from relx.providers import (
@@ -9,6 +9,7 @@ from relx.providers import (
     UserProvider,
     PackageProvider,
 )
+from relx.models import OBSGroup, OBSUser
 from relx.utils.logger import logger_setup
 
 
@@ -102,10 +103,28 @@ def _process_single_package(
     else:
         table.add_row("Shipped", "*** NO ***")
 
+    # The `is_group` flag determines the type for all bugowners of this package.
+    # We can check it once outside the loop.
     for bugowner in bugowners:
-        for key, value in user_provider.get_entity_info(
-            name=bugowner, is_group=is_group
-        ).items():
-            log.debug("%s: %s", key, value)
-            table.add_row(key, str(value))
+        entity = user_provider.get_entity_info(name=bugowner, is_group=is_group)
+
+        if is_group:
+            group = cast(OBSGroup, entity)
+            log.debug("Group Info: %s", group)
+            if group.name:
+                table.add_row("Group", group.name)
+            if group.email:
+                table.add_row("Email", group.email)
+            if group.maintainers:
+                table.add_row("Maintainers", ", ".join(group.maintainers))
+        else:
+            user = cast(OBSUser, entity)
+            log.debug("User Info: %s", user)
+            if user.login:
+                table.add_row("User", user.login)
+            if user.email:
+                table.add_row("Email", user.email)
+            if user.realname:
+                table.add_row("Name", user.realname)
+
     console.print(table)
