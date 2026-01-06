@@ -4,6 +4,7 @@ import importlib
 import os
 import sys
 import urllib.error
+from pathlib import Path
 from typing import Any, Dict
 
 import argcomplete
@@ -52,12 +53,16 @@ def load_all_modules(parser: argparse.ArgumentParser) -> None:
         title="positional arguments",
         help="Help for the subprograms that this tool offers.",
     )
-    package_path = os.path.dirname(os.path.abspath(__file__))
+    package_path = Path(__file__).parent.resolve()
     module_names = []
 
-    for name in os.listdir(package_path):
-        if name.endswith(".py") and not name.startswith("__"):
-            module_name = name[:-3]
+    for path in package_path.iterdir():
+        if (
+            path.is_file()
+            and path.name.endswith(".py")
+            and not path.name.startswith("__")
+        ):
+            module_name = path.name[:-3]
             if module_name not in ["cli", "exceptions", "requests"]:
                 module_names.append(module_name)
 
@@ -71,22 +76,20 @@ def load_all_modules(parser: argparse.ArgumentParser) -> None:
 
 def get_config_path() -> str:
     """Determines the path to the configuration file."""
-    project_root = os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    )
-    dotenv_path = os.path.join(project_root, ".env")
+    project_root = Path(__file__).resolve().parents[2]
+    dotenv_path = project_root / ".env"
     load_dotenv(dotenv_path=dotenv_path)
 
     relx_conf_dir = os.environ.get("RELX_CONF_DIR")
     if relx_conf_dir:
-        config_dir = os.path.expanduser(relx_conf_dir)
+        config_dir = Path(relx_conf_dir).expanduser()
     else:
-        xdg_config_home = os.environ.get(
-            "XDG_CONFIG_HOME", os.path.expanduser("~/.config")
+        xdg_config_home = Path(
+            os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")
         )
-        config_dir = os.path.join(xdg_config_home, "relx")
+        config_dir = xdg_config_home / "relx"
 
-    return os.path.join(config_dir, "config.yaml")
+    return str(config_dir / "config.yaml")
 
 
 def load_config(config_file_path: str) -> Dict[str, Any]:
