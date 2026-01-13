@@ -72,7 +72,7 @@ Once installed, you can use the `relx` command.
             Requires `--project` (e.g., `-p myproject`). Can optionally filter by `--staging` (e.g., `-s A`) or `--bugowner`.
 
         -   **Gitea Provider:**
-            Requires `--repository` and `--branch`. The `--reviewer` argument is now optional if a default `reviewer` is specified under the `gitea` section in your `config.yaml`. Can optionally filter by specific pull request IDs using `--prs` (e.g., `--prs 123,456`).
+            Requires `--repository` and `--branch`. The `--reviewer` argument is now optional if a default `reviewer` is specified under the `gitea` section in your `config.yaml`. The `--label` argument is also optional if a default `label` is specified under the `gitea` section in your `config.yaml`, or it can be provided directly (e.g., `--label my_label`). Can optionally filter by specific pull request IDs using `--prs` (e.g., `--prs 123,456`).
 
         **Example: List and review Gitea pull requests**
 

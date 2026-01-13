@@ -25,6 +25,7 @@ class TestReviewsCLI(unittest.TestCase):
             branch=None,
             reviewer=None,
             prs=None,
+            label=None,
         )
         self.mock_config = {}
 
@@ -183,6 +184,7 @@ class TestReviewsCLI(unittest.TestCase):
         self.mock_args.branch = "main"
         self.mock_args.reviewer = "me"
         self.mock_args.prs = None
+        self.mock_args.label = "some-label"
 
         mock_provider_instance = MagicMock()
         mock_provider_class = MagicMock()
@@ -247,8 +249,14 @@ class TestReviewsCLI(unittest.TestCase):
         self.mock_args.branch = "main"
         self.mock_args.reviewer = None  # Explicitly not provided via CLI
         self.mock_args.prs = None
+        self.mock_args.label = None
 
-        self.mock_config = {"gitea": {"reviewer": "default_reviewer_from_config"}}
+        self.mock_config = {
+            "gitea": {
+                "reviewer": "default_reviewer_from_config",
+                "label": "default_label_from_config",
+            }
+        }
 
         mock_provider_instance = MagicMock()
         mock_provider_class = MagicMock()
@@ -278,6 +286,7 @@ class TestReviewsCLI(unittest.TestCase):
         # Assert
         # The reviewer should now be set in self.mock_args by the main function
         self.assertEqual(self.mock_args.reviewer, "default_reviewer_from_config")
+        self.assertEqual(self.mock_args.label, "default_label_from_config")
 
         mock_provider_class.build_list_params.assert_called_once_with(self.mock_args)
         mock_provider_instance.list_requests.assert_called_once_with(mock_list_params)

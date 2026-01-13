@@ -41,6 +41,7 @@ class GiteaReviewProvider(ReviewProvider):
             repository=args.repository,
             branch=args.branch,
             reviewer=args.reviewer,
+            label=args.label,
         )
 
     @classmethod
@@ -98,6 +99,9 @@ class GiteaReviewProvider(ReviewProvider):
             gitea_params.branch,
             gitea_params.repository,
         ]
+
+        if gitea_params.label:
+            command_args.extend(["--label", gitea_params.label])
 
         result = self._run_command(command_args)
         if not result or not result.stdout:

@@ -25,6 +25,7 @@ class GiteaListRequestsParams(ListRequestsParams):
     reviewer: str
     branch: str
     repository: str
+    label: Optional[str] = None
 
 
 @dataclass

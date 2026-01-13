@@ -94,6 +94,7 @@ def build_parser(parent_parser, config: Dict[str, Any] | None) -> None:
     )
     gitea_group.add_argument("--branch", dest="branch", help="Gitea target branch.")
     gitea_group.add_argument("--reviewer", dest="reviewer", help="Gitea reviewer.")
+    gitea_group.add_argument("--label", dest="label", help="Gitea label.")
     gitea_group.add_argument(
         "--prs",
         dest="prs",
@@ -245,6 +246,9 @@ def main(args: Namespace, config: Dict[str, Any]) -> None:
         if not args.reviewer:
             gitea_config = config.get("gitea", {})
             args.reviewer = gitea_config.get("reviewer")
+        if not args.label:
+            gitea_config = config.get("gitea", {})
+            args.label = gitea_config.get("label")
         if not args.reviewer:
             console.print(
                 "[bold red]Error: Gitea reviewer must be provided with --reviewer or set in config.[/bold red]"

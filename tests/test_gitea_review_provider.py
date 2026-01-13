@@ -82,6 +82,44 @@ class TestGiteaReviewProvider(unittest.TestCase):
             ],
         )
 
+    def test_list_requests_with_label(self):
+        """
+        Verifies list_requests correctly uses the label when provided.
+        """
+        # Arrange
+        self.mock_command_runner.return_value = MagicMock(
+            stdout=json.dumps([{"requests": []}])
+        )
+        params = GiteaListRequestsParams(
+            repository="my-repo", branch="main", reviewer="me", label="important"
+        )
+
+        # Act
+        self.provider.list_requests(params)
+
+        # Assert
+        self.mock_command_runner.assert_called_once_with(
+            [
+                "git",
+                "obs",
+                "pr",
+                "list",
+                "--state",
+                "open",
+                "--review-state",
+                "REQUEST_REVIEW",
+                "--no-draft",
+                "--export",
+                "--reviewer",
+                "me",
+                "--target-branch",
+                "main",
+                "my-repo",
+                "--label",
+                "important",
+            ]
+        )
+
     def test_list_requests_no_reviews(self):
         """
         Verifies list_requests returns an empty list when no reviews are found.
@@ -231,6 +269,7 @@ class TestGiteaReviewProviderStaticMethods(unittest.TestCase):
             repository="my-repo",
             branch="main",
             reviewer="me",
+            label="some-label",
             # OBS args are not used by this provider
             project=None,
             staging=None,
@@ -246,6 +285,7 @@ class TestGiteaReviewProviderStaticMethods(unittest.TestCase):
         self.assertEqual(params.repository, "my-repo")
         self.assertEqual(params.branch, "main")
         self.assertEqual(params.reviewer, "me")
+        self.assertEqual(params.label, "some-label")
 
     def test_build_get_request_diff_params(self):
         """
